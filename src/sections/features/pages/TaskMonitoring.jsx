@@ -1,4 +1,3 @@
-// src/sections/features/pages/TaskMonitoring.jsx
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import AppLayout from "../components/AppLayout";
 import "./TaskMonitoring.css";
@@ -693,7 +692,7 @@ export default function TaskMonitoring() {
             <table className="table table-hover tasks-table">
               <thead className="text-center">
                 <tr>
-                  <Th label="ID" k="id" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  {/* <Th label="ID" k="id" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} /> */}
                   <Th label="Date" k="date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Trainer (ID)" k="trainer" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Project" k="project" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -713,7 +712,7 @@ export default function TaskMonitoring() {
               <tbody className="text-center">
                 {pageRows.map((r) => (
                   <tr key={r.id}>
-                    <td className="text-muted">#{r.id}</td>
+                    {/* <td className="text-muted">#{r.id}</td> */}
                     <td>{r.date}</td>
                     <td>
                       {view.type !== "trainer" ? (

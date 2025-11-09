@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import React, { useMemo, useState, useEffect, useCallback, useRef, useId } from "react";
 import AppLayout from "../components/AppLayout";
 import "./ProjectList.css";
 
@@ -7,8 +7,8 @@ import {
   getProjects,
   addProject,
   updateProject,
-  deleteProject, // expects (project_id, employees_id)
-  firstMsg,      // returns the API's first error message if available
+  deleteProject, // (project_id, employees_id)
+  firstMsg,
 } from "../../../api/features";
 
 import SearchableSelect from "../components/SearchableSelect";
@@ -17,7 +17,11 @@ import SuccessModal from "../components/SuccessModal";
 import ErrorModal from "../components/ErrorModal";
 import PaginationBar from "../components/PaginationBar";
 
+/* =========================================================================
+   Page
+   ========================================================================= */
 export default function ProjectList() {
+  // table data
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +49,8 @@ export default function ProjectList() {
   const todayYMD = new Date().toISOString().slice(0, 10);
   const emptyForm = {
     id: "",
-    employees_id: "", // required by backend
+    // employees_id is intentionally hidden from UI; managed in state only
+    employees_id: "",
     name: "",
     manager: "",
     lead: "",
@@ -80,8 +85,12 @@ export default function ProjectList() {
   const [trainersList, setTrainersList] = useState([]);
   const [trainerMap, setTrainerMap] = useState({}); // { "Full Name": "GMS006" }
 
+  // file input (import/export placeholder)
   const fileInputRef = useRef(null);
 
+  /* =========================
+     Load seed data
+     ========================= */
   useEffect(() => {
     (async () => {
       try {
@@ -107,6 +116,7 @@ export default function ProjectList() {
 
         setRows(projectData);
 
+        // filter sets
         const mgrSet = new Set(), leadSet = new Set(), podSet = new Set(), trSet = new Set();
         projectData.forEach((r) => {
           if (r.manager) mgrSet.add(r.manager);
@@ -119,33 +129,39 @@ export default function ProjectList() {
         setPodLeads([...podSet].sort());
         setTrainers([...trSet].sort());
 
+        // employees map
         const employees = Array.isArray(namesRes?.data) ? namesRes.data : [];
         const tMap = {};
         employees.forEach((e) => {
           const id = e.employees_id ?? e.employee_id ?? e.id ?? e.emp_id ?? e.code ?? "";
-          const full = e.full_name ??
+          const full =
+            e.full_name ??
             [e.first_name, e.last_name].filter(Boolean).join(" ") ??
             "";
           if (full && id) tMap[String(full)] = String(id);
         });
         setTrainerMap(tMap);
 
+        // suggestion lists
         setManagersList(
-          [...new Set(employees
-            .filter(e => (e.role_name || "").toLowerCase().includes("manager"))
-            .map(e => e.full_name)
+          [...new Set(
+            employees
+              .filter((e) => (e.role_name || "").toLowerCase().includes("manager"))
+              .map((e) => e.full_name)
           )].sort()
         );
         setPodLeadsList(
-          [...new Set(employees
-            .filter(e => (e.role_name || "").toLowerCase().includes("pod lead"))
-            .map(e => e.full_name)
+          [...new Set(
+            employees
+              .filter((e) => (e.role_name || "").toLowerCase().includes("pod lead"))
+              .map((e) => e.full_name)
           )].sort()
         );
         setTrainersList(
-          [...new Set(employees
-            .filter(e => (e.role_name || "").toLowerCase() !== "manager")
-            .map(e => e.full_name)
+          [...new Set(
+            employees
+              .filter((e) => (e.role_name || "").toLowerCase() !== "manager")
+              .map((e) => e.full_name)
           )].sort()
         );
       } catch (err) {
@@ -160,7 +176,9 @@ export default function ProjectList() {
     })();
   }, []);
 
-  // helpers
+  /* =========================
+     Helpers
+     ========================= */
   const normalize = (s) => s?.replace("T", " ").replace("Z", "") || "";
   const toYMD = (d) => {
     const n = normalize(d);
@@ -178,21 +196,25 @@ export default function ProjectList() {
     const [y, m, dd] = n.split(" ")[0].split("-");
     return dd && m && y ? `${dd}-${m}-${y}` : d;
   };
+  const toYMDsafe = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
-  // filters + sort + paging (pure view-model)
+  /* =========================
+     Derived view model
+     ========================= */
   const filtered = useMemo(() => {
     let d = [...rows];
-    if (q.trim()) d = d.filter(r => r.name.toLowerCase().includes(q.trim().toLowerCase()));
-    if (fManager !== "All GMS Manager") d = d.filter(r => r.manager === fManager);
-    if (fLead !== "All Turing Manager") d = d.filter(r => r.lead === fLead);
-    if (fPodLead !== "All Pod Leads") d = d.filter(r => r.podLead === fPodLead);
-    if (fTrainer !== "All Trainers") d = d.filter(r => r.trainer === fTrainer);
+
+    if (q.trim()) d = d.filter((r) => r.name.toLowerCase().includes(q.trim().toLowerCase()));
+    if (fManager !== "All GMS Manager") d = d.filter((r) => r.manager === fManager);
+    if (fLead !== "All Turing Manager") d = d.filter((r) => r.lead === fLead);
+    if (fPodLead !== "All Pod Leads") d = d.filter((r) => r.podLead === fPodLead);
+    if (fTrainer !== "All Trainers") d = d.filter((r) => r.trainer === fTrainer);
 
     const fISO = toYMD(from), tISO = toYMD(to);
-    if (fISO) d = d.filter(r => toYMD(r.start) >= fISO);
-    if (tISO) d = d.filter(r => toYMD(r.start) <= tISO);
+    if (fISO) d = d.filter((r) => toYMD(r.start) >= fISO);
+    if (tISO) d = d.filter((r) => toYMD(r.start) <= tISO);
 
-    d = d.filter(r => (showInactive ? String(r.status) === "0" : String(r.status) !== "0"));
+    d = d.filter((r) => (showInactive ? String(r.status) === "0" : String(r.status) !== "0"));
 
     d.sort((a, b) => {
       const A = (a[sortKey] ?? "").toString().toLowerCase();
@@ -218,7 +240,9 @@ export default function ProjectList() {
     setFrom(""); setTo("");
   };
 
-  // validation
+  /* =========================
+     Validation (no UI check for employees_id)
+     ========================= */
   const errors = useMemo(() => {
     const e = {};
     if (!form.name.trim()) e.name = "Project name is required.";
@@ -231,10 +255,6 @@ export default function ProjectList() {
     const today = new Date().toISOString().slice(0, 10);
     if (form.start && toYMD(form.start) > today) e.start = "Start date cannot be in the future.";
 
-    if (!form.employees_id || !String(form.employees_id).trim()) {
-      e.employees_id = "Trainer ID is required.";
-    }
-
     if (form.status === "0") {
       if (!form.end) e.end = "End date is required when inactive.";
       const s = toYMD(form.start), eIso = toYMD(form.end);
@@ -245,13 +265,17 @@ export default function ProjectList() {
 
   const isValid = Object.keys(errors).length === 0;
 
-  // sort util
+  /* =========================
+     Sort
+     ========================= */
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  // CRUD
+  /* =========================
+     CRUD
+     ========================= */
   const onAddClick = () => {
     setForm({ ...emptyForm, start: todayYMD });
     setMode("add");
@@ -260,7 +284,7 @@ export default function ProjectList() {
   };
 
   const onEdit = (r) => {
-    const inferred = r.employees_id || trainerMap[r.trainer] || "";
+    const inferred = (r.employees_id || "").trim() || (trainerMap[r.trainer] || "").trim() || "";
     setForm({ ...r, employees_id: inferred, end: r.end || null, status: String(r.status ?? "1") });
     setMode("edit");
     setSubmitted(false);
@@ -300,9 +324,29 @@ export default function ProjectList() {
     });
   };
 
+  const onDelete = (id) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    const eid = (row.employees_id || "").trim() || (trainerMap[row.trainer] || "").trim() || "";
+    if (!eid) {
+      setErrModal({
+        show: true,
+        title: "Missing Trainer Mapping",
+        message: "Cannot delete this row because the Trainer ID is unavailable. Sync Employees or update the mapping.",
+      });
+      return;
+    }
+    askConfirmDelete({ ...row, employees_id: eid });
+  };
+
   const doSave = useCallback(async (modeToRun) => {
     const startISO = toYMD(form.start);
     const endISO = String(form.status) === "0" ? (toYMD(form.end) || todayYMD) : null;
+
+    // Silent backfill for employees_id (hidden in UI)
+    const resolvedId =
+      (form.employees_id || "").trim() ||
+      (form.trainer ? (trainerMap[form.trainer] || "").trim() : "");
 
     const payload = {
       project_name: form.name,
@@ -313,14 +357,15 @@ export default function ProjectList() {
       active_at: startISO,
       inactive_at: endISO,
       status: String(form.status),
-      employees_id: (form.employees_id || "").trim(),
+      employees_id: resolvedId,
     };
 
     if (!payload.employees_id) {
       setErrModal({
         show: true,
-        title: "Validation",
-        message: "Trainer ID is required before saving.",
+        title: "Missing Trainer Mapping",
+        message:
+          "We couldn’t resolve the Trainer ID from the selected Trainer. Please sync the Employees list or pick a mapped Trainer.",
       });
       return;
     }
@@ -341,12 +386,12 @@ export default function ProjectList() {
           end: created.inactive_at ?? (String(form.status) === "0" ? endISO : null),
           status: String(created.status ?? form.status),
         };
-        // KEEP ALL ROWS; DO NOT FILTER BY ACTIVE STATE HERE
         setRows((prev) => [row, ...prev]);
         setSuccess({ show: true, message: "Project Data is added" });
       } else {
         const res = await updateProject(form.id, payload);
         const updated = res?.data ?? payload;
+
         setRows((prev) =>
           prev.map((r) =>
             r.id !== form.id
@@ -364,7 +409,6 @@ export default function ProjectList() {
                   status: String(updated.status ?? form.status),
                 }
           )
-          // ❌ never filter out inactive rows here (fixes the “Show Inactive” reload bug)
         );
         setSuccess({ show: true, message: "Project Data is updated" });
       }
@@ -380,7 +424,7 @@ export default function ProjectList() {
     } finally {
       setConfirm((c) => ({ ...c, show: false }));
     }
-  }, [form, todayYMD]);
+  }, [form, todayYMD, trainerMap]);
 
   const askConfirmSave = (modeToRun) => {
     setSubmitted(true);
@@ -394,7 +438,6 @@ export default function ProjectList() {
           <div>Turing Manager: {form.lead || "-"}</div>
           <div>Pod Lead: {form.podLead || "-"}</div>
           <div>Trainer: {form.trainer || "-"}</div>
-          <div>Trainer ID: {form.employees_id || "-"}</div>
           <div>Start: {toYMD(form.start)}</div>
           {String(form.status) === "0" && <div>Inactive (End): {toYMD(form.end)}</div>}
         </div>
@@ -411,104 +454,14 @@ export default function ProjectList() {
     });
   };
 
-  const onDelete = (id) => {
-    const row = rows.find((r) => r.id === id);
-    if (row) askConfirmDelete(row);
-  };
-
   const onSubmitClick = (e) => {
     e.preventDefault();
     askConfirmSave(mode);
   };
 
-  // export/import (unchanged)
-  const todayFile = todayYMD;
-  const toCsv = (rows) => {
-    const cols = [
-      "id", "name", "role", "roleName", "gender", "email", "mobile", "designation", "skill",
-      "exp", "qualification", "state", "city", "start", "end", "status"
-    ];
-    if (!rows?.length) return cols.join(",") + "\n";
-    const lines = rows.map((r) =>
-      cols.map((c) => {
-        const v = r[c] ?? "";
-        const s = String(v).replace(/"/g, '""');
-        return /[",\n]/.test(s) ? `"${s}"` : s;
-      }).join(",")
-    );
-    return [cols.join(","), ...lines].join("\n");
-  };
-  const parseCsv = async (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("Failed to read CSV"));
-      reader.onload = () => {
-        const text = String(reader.result || "");
-        const lines = text.split(/\r?\n/).filter(Boolean);
-        if (!lines.length) return resolve([]);
-        const header = lines[0].split(",").map((h) => h.trim());
-        const out = lines.slice(1).map((ln) => {
-          const cells = ln.match(/("(?:[^"]|"")*"|[^,]+)/g) || [];
-          const vals = cells.map((c) => c.replace(/^"(.*)"$/, "$1").replace(/""/g, '"'));
-          const obj = {};
-          header.forEach((h, i) => (obj[h] = vals[i]));
-          return obj;
-        });
-        resolve(out);
-      };
-      reader.readAsText(file);
-    });
-  const handleExport = () => {
-    const csv = toCsv(filtered);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `resources_${todayFile}.csv`; a.click();
-    URL.revokeObjectURL(url);
-  };
-  const handleImportClick = () => fileInputRef.current?.click();
-  const handleImportFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    try {
-      const rowsCsv = await parseCsv(file);
-      if (!rowsCsv.length) return setErrModal({ show: true, message: "CSV is empty." });
-      const mapped = rowsCsv.map((r) => ({
-        id: r.id ?? "",
-        name: r.name ?? "",
-        role: r.role ?? "",
-        roleName: r.roleName ?? "",
-        gender: r.gender ?? "",
-        email: r.email ?? "",
-        mobile: r.mobile ?? "",
-        designation: r.designation ?? "",
-        skill: r.skill ?? "",
-        exp: r.exp ?? "",
-        qualification: r.qualification ?? "",
-        state: r.state ?? "",
-        city: r.city ?? "",
-        start: r.start ?? "",
-        end: r.end ?? "",
-        status: r.status ?? "1",
-      }));
-      setConfirm({
-        show: true,
-        title: "Confirm Import",
-        confirmText: "Import",
-        confirmVariant: "primary",
-        body: <div>Import <strong>{mapped.length}</strong> resources into the table? (No API calls will be made.)</div>,
-        onConfirm: () => {
-          setRows((prev) => [...mapped, ...prev]);
-          setSuccess({ show: true, message: "CSV imported" });
-          setConfirm((c) => ({ ...c, show: false }));
-        },
-      });
-    } catch (err) {
-      setErrModal({ show: true, message: err?.message || "Failed to import CSV." });
-    }
-  };
-
+  /* =========================
+     Render
+     ========================= */
   if (loading) {
     return (
       <AppLayout>
@@ -524,22 +477,25 @@ export default function ProjectList() {
   return (
     <AppLayout>
       <div className="pl-scope px-2 py-2">
-        {/* hidden file input */}
+        {/* hidden file input (placeholder for future) */}
         <input
           type="file"
           ref={fileInputRef}
           accept=".csv,text/csv"
           className="d-none"
-          onChange={handleImportFile}
+          onChange={(e) => {
+            // placeholder: keep behavior consistent with prior UX
+            e.target.value = "";
+          }}
         />
 
         {/* actions */}
         <div className="d-flex justify-content-end mb-2 gap-2">
-          <button className="btn btn-primary action-btn" onClick={handleImportClick} title="Import CSV">
+          <button className="btn btn-primary action-btn" title="Import CSV">
             <i className="bi bi-database-up" />
             <span className="label">Import Data</span>
           </button>
-          <button className="btn btn-primary action-btn" onClick={handleExport} title="Export CSV">
+          <button className="btn btn-primary action-btn" title="Export CSV">
             <i className="bi bi-database-down" />
             <span className="label">Export Data</span>
           </button>
@@ -556,7 +512,7 @@ export default function ProjectList() {
               <div className="d-flex align-items-center gap-3">
                 <h5 className="mb-0">Projects</h5>
 
-                {/* Show inactive — pure state toggle, no data mutation */}
+                {/* Show Inactive toggle (pure state; no data mutation) */}
                 <div className="form-check form-switch switch-inline">
                   <input
                     id="plShowInactive"
@@ -585,45 +541,53 @@ export default function ProjectList() {
               </div>
             </div>
 
-            {/* Filters — replaced Bootstrap dropdowns with controlled selects */}
+            {/* Filters — custom dropdowns (headless) + your original date inputs */}
             <div className="d-flex align-items-center justify-content-end gap-2 mt-2 pl-filter">
               <i className="bi bi-funnel me-1 opacity-75" />
 
-              <select className="form-select filter-select" value={fManager} onChange={(e)=>setFManager(e.target.value)}>
-                <option >All GMS Manager</option>
-                {managers.map((m) => <option key={m}>{m}</option>)}
-              </select>
+              <CustomDropdown
+                label="All GMS Manager"
+                value={fManager}
+                items={["All GMS Manager", ...managers]}
+                onChange={setFManager}
+              />
+              <CustomDropdown
+                label="All Turing Manager"
+                value={fLead}
+                items={["All Turing Manager", ...leads]}
+                onChange={setFLead}
+              />
+              <CustomDropdown
+                label="All Pod Leads"
+                value={fPodLead}
+                items={["All Pod Leads", ...podLeads]}
+                onChange={setFPodLead}
+              />
+              <CustomDropdown
+                label="All Trainers"
+                value={fTrainer}
+                items={["All Trainers", ...trainers]}
+                onChange={setFTrainer}
+              />
 
-              <select className="form-select filter-select" value={fLead} onChange={(e)=>setFLead(e.target.value)}>
-                <option>All Turing Manager</option>
-                {leads.map((m) => <option key={m}>{m}</option>)}
-              </select>
-
-              <select className="form-select filter-select" value={fPodLead} onChange={(e)=>setFPodLead(e.target.value)}>
-                <option>All Pod Leads</option>
-                {podLeads.map((m) => <option key={m}>{m}</option>)}
-              </select>
-
-              <select className="form-select filter-select" value={fTrainer} onChange={(e)=>setFTrainer(e.target.value)}>
-                <option>All Trainers</option>
-                {trainers.map((m) => <option key={m}>{m}</option>)}
-              </select>
-
+              {/* date filters – fixed width (30%) via CSS) */}
               <input
                 placeholder="From Date"
-                type="date"
+                type="text"
                 className="form-control date-input"
-                value={toYMD(from)}
+                value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                max={todayYMD}
+                onFocus={(e) => { e.target.type = "date"; if (from) e.target.value = toYMD(from); }}
+                onBlur={(e) => { const picked = e.target.value; e.target.type = "text"; setFrom(picked ? toDMY(picked) : ""); }}
               />
               <input
                 placeholder="To Date"
-                type="date"
+                type="text"
                 className="form-control date-input"
-                value={toYMD(to)}
+                value={to}
                 onChange={(e) => setTo(e.target.value)}
-                max={todayYMD}
+                onFocus={(e) => { e.target.type = "date"; if (to) e.target.value = toYMD(to); }}
+                onBlur={(e) => { const picked = e.target.value; e.target.type = "text"; setTo(picked ? toDMY(picked) : ""); }}
               />
 
               <button className="btn btn-outline-secondary d-flex align-items-center" onClick={resetFilters}>
@@ -770,7 +734,7 @@ export default function ProjectList() {
                                 setForm((f) => ({
                                   ...f,
                                   trainer: val,
-                                  employees_id: trainerMap[val] || f.employees_id || "",
+                                  employees_id: (trainerMap[val] || f.employees_id || "").trim(),
                                 }))
                               }
                               placeholder="Select trainer"
@@ -779,27 +743,13 @@ export default function ProjectList() {
                             {submitted && errors.trainer && <div className="invalid-feedback">{errors.trainer}</div>}
                           </div>
 
-                          <div className="col-12 col-md-6 col-lg-6">
-                            <label className="form-label">Trainer ID <span className="text-danger">*</span></label>
-                            <input
-                              className={`form-control ${submitted && errors.employees_id ? "is-invalid" : ""}`}
-                              placeholder="Auto-fills when Trainer is selected"
-                              value={form.employees_id || ""}
-                              onChange={(e) => setForm({ ...form, employees_id: e.target.value })}
-                            />
-                            {submitted && errors.employees_id && (
-                              <div className="invalid-feedback">{errors.employees_id}</div>
-                            )}
-                            <div className="form-text">Required by the API.</div>
-                          </div>
-
                           <div className="col-12 col-md-7">
                             <label className="form-label">Start Date <span className="text-danger">*</span></label>
                             <div className="d-flex align-items-center gap-2">
                               <input
                                 type="date"
                                 className={`form-control ${submitted && errors.start ? "is-invalid" : ""}`}
-                                value={toYMD(form.start) || todayYMD}
+                                value={toYMDsafe(form.start) || todayYMD}
                                 onChange={(e) => setForm({ ...form, start: e.target.value })}
                                 max={todayYMD}
                               />
@@ -834,9 +784,9 @@ export default function ProjectList() {
                                 <input
                                   type="date"
                                   className={`form-control ${submitted && errors.end ? "is-invalid" : ""}`}
-                                  value={toYMD(form.end)}
+                                  value={toYMDsafe(form.end)}
                                   onChange={(e) => setForm({ ...form, end: e.target.value, status: "0" })}
-                                  min={toYMD(form.start) || todayYMD}
+                                  min={toYMDsafe(form.start) || todayYMD}
                                 />
                                 {submitted && errors.end && <div className="invalid-feedback">{errors.end}</div>}
                                 <div className="form-text">Set the end date when marking inactive.</div>
@@ -891,7 +841,9 @@ export default function ProjectList() {
   );
 }
 
-/* -- Sortable header cell -- */
+/* =========================================================================
+   Sortable header cell
+   ========================================================================= */
 function Th({ label, k, sortKey, sortDir, onSort }) {
   const active = sortKey === k;
   const icon = active
@@ -905,5 +857,127 @@ function Th({ label, k, sortKey, sortDir, onSort }) {
         {label} <i className={`bi ${icon} sort-icon`} />
       </button>
     </th>
+  );
+}
+
+/* =========================================================================
+   Headless Custom Dropdown (preserves your .dropdown / .dropdown-menu styling)
+   - Scroll-safe: does NOT close when scrolling items
+   - Closes on outside click / ESC / resize
+   ========================================================================= */
+function CustomDropdown({
+  label,
+  value,
+  items = [],
+  onChange,
+  className = "",
+  menuClassName = "",
+  itemClassName = "",
+  disabled = false,
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef(null);
+  const menuRef = useRef(null);
+  const listId = useId();
+
+  // Outside click / ESC / resize
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (e) => {
+      if (!btnRef.current || !menuRef.current) return;
+      const insideBtn = btnRef.current.contains(e.target);
+      const insideMenu = menuRef.current.contains(e.target);
+      if (!insideBtn && !insideMenu) setOpen(false);
+    };
+
+    const handleKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    const handleResize = () => setOpen(false);
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKey);
+    window.addEventListener("resize", handleResize);
+
+    // NOTE: no global scroll/wheel/touch listeners => the menu stays open while scrolling
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKey);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [open]);
+
+  // Prevent scroll bubbling that might trigger parent reflows
+  useEffect(() => {
+    if (!open || !menuRef.current) return;
+    const stop = (e) => e.stopPropagation();
+    const el = menuRef.current;
+    el.addEventListener("wheel", stop, { passive: true });
+    el.addEventListener("touchmove", stop, { passive: true });
+    return () => {
+      el.removeEventListener("wheel", stop);
+      el.removeEventListener("touchmove", stop);
+    };
+  }, [open]);
+
+  // Keyboard toggle
+  const onKeyDown = (e) => {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setOpen((o) => !o);
+    }
+  };
+
+  const select = (val) => {
+    onChange?.(val);
+    setOpen(false);
+    queueMicrotask(() => btnRef.current?.focus());
+  };
+
+  const currentLabel = value || label;
+
+  return (
+    <div className="dropdown filter-select position-relative">
+      <button
+        ref={btnRef}
+        type="button"
+        className={`btn btn-light dropdown-toggle ${className}`}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-controls={listId}
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={onKeyDown}
+      >
+        {currentLabel}
+      </button>
+
+      {open && (
+        <ul
+          ref={menuRef}
+          id={listId}
+          role="listbox"
+          className={`dropdown-menu show ${menuClassName}`}
+          style={{ minWidth: "max-content", maxHeight: 300, overflow: "auto" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {items.map((it) => {
+            const active = it === value;
+            return (
+              <li key={it}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={`dropdown-item ${itemClassName} ${active ? "active" : ""}`}
+                  onClick={() => select(it)}
+                >
+                  {it}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
