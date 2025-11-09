@@ -39,7 +39,10 @@ const monthLabel = (key) => {
   return new Date(y, m - 1, 1).toLocaleString("en-US", { month: "short" });
 };
 
-// Export / Import CSV (kept from your original pattern)
+const toWeekday = (d) => d.toLocaleDateString("en-US", { weekday: "short" });
+const toMonShort = (d) => d.toLocaleDateString("en-US", { month: "short" });
+
+/* Export / Import CSV */
 const toCsv = (rows) => {
   const cols = [
     "id","date","trainerId","trainer","project_id","project","manager","lead","podLead",
@@ -111,6 +114,8 @@ export default function TaskMonitoring() {
   const [view, setView] = useState({ type: "overview" }); // or { type:"trainer", trainerId, name }
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
+
+  // ALIGNMENT: hard cap visible rows
   const PAGE_OVERVIEW = 10;
   const PAGE_TRAINER = 5;
   const [page, setPage] = useState(1);
@@ -221,7 +226,6 @@ export default function TaskMonitoring() {
             }))
           : [];
 
-        // Hydrate trainer name by ID (fix name missing after reload)
         setRows(tasks.map((r) => ({ ...r, trainer: r.trainer || nameById[r.trainerId] || r.trainerId })));
       } catch (err) {
         setErrorBanner(firstMsg(err?.response?.data) || err?.message || "Failed to load data");
@@ -267,7 +271,7 @@ export default function TaskMonitoring() {
   useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
   useEffect(() => { setPage(1); }, [range, view]);
 
-  /* ========== Validation (new rules) ========== */
+  /* ========== Validation ========== */
   const hoursNum = Number(form.hours || 0);
   const numOk = (v) => v === "" || /^[0-9]+$/.test(String(v));
   const errors = useMemo(() => {
@@ -343,7 +347,7 @@ export default function TaskMonitoring() {
 
   const onTrainerChange = (trainerId) => {
     const t = trainers.find((x) => String(x.employees_id) === String(trainerId));
-    if (t && !isActiveFlag(t)) return; // block inactive selection
+    if (t && !isActiveFlag(t)) return;
 
     const mapped = projects
       .filter((p) => String(p.employees_id) === String(trainerId))
@@ -365,7 +369,7 @@ export default function TaskMonitoring() {
 
   const onProjectChange = (projectId) => {
     const p = projects.find((x) => String(x.project_id) === String(projectId));
-    if (p && !isActiveFlag(p)) return; // block inactive
+    if (p && !isActiveFlag(p)) return;
     setForm((f) => ({
       ...f,
       project_id: projectId,
@@ -380,7 +384,6 @@ export default function TaskMonitoring() {
     setSubmitted(true);
     if (Object.keys(errors).length) return;
 
-    // Hard guard: active trainer & project only
     const pickedTrainer = trainers.find((t) => String(t.employees_id) === String(form.trainerId));
     const pickedProject = projects.find((p) => String(p.project_id) === String(form.project_id));
     if (!pickedTrainer || !isActiveFlag(pickedTrainer)) {
@@ -496,7 +499,7 @@ export default function TaskMonitoring() {
 
   // Import/Export
   const handleExport = () => {
-    const csv = toCsv(filtered); // export the current filtered view
+    const csv = toCsv(filtered);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -574,10 +577,13 @@ export default function TaskMonitoring() {
     return Object.entries(total).map(([name, value]) => ({ name, value }));
   }, [chartRows]);
 
+  // ----- HOURS SERIES + TICKS per spec -----
   const hoursSeries = useMemo(() => {
     if (range === "day") {
+      const d = new Date(`${TODAY}T00:00:00`);
+      const label = `${toWeekday(d)} ${pad2(d.getDate())} ${toMonShort(d)}`;
       const sum = chartRows.reduce((a, r) => a + Number(r.hours || 0), 0);
-      return [{ label: TODAY, hours: sum }];
+      return [{ label, hours: sum }];
     }
     if (range === "week") {
       const out = [];
@@ -587,7 +593,8 @@ export default function TaskMonitoring() {
         d.setDate(anchor.getDate() - i);
         const ymd = toLocalYMD(d);
         const tot = chartRows.filter((r) => r.date === ymd).reduce((a, r) => a + Number(r.hours || 0), 0);
-        out.push({ label: `${d.toLocaleDateString("en-US", { weekday: "short" })}\n${pad2(d.getDate())}`, hours: tot });
+        const label = `${toWeekday(d)} ${pad2(d.getDate())} ${toMonShort(d)}`;
+        out.push({ label, hours: tot });
       }
       return out;
     }
@@ -595,13 +602,14 @@ export default function TaskMonitoring() {
       const now = new Date(`${TODAY}T00:00:00`);
       const year = now.getFullYear();
       const mon = now.getMonth();
+      const monName = toMonShort(now);
       const end = new Date(year, mon + 1, 0).getDate();
       const buckets = [
-        { key: `1–7`, start: 1, end: 7, hours: 0 },
-        { key: `8–14`, start: 8, end: 14, hours: 0 },
-        { key: `15–21`, start: 15, end: 21, hours: 0 },
-        { key: `22–28`, start: 22, end: 28, hours: 0 },
-        { key: `29–${end}`, start: 29, end, hours: 0 },
+        { key: `Wk 1 — ${monName}`, start: 1, end: 7, hours: 0 },
+        { key: `Wk 2 — ${monName}`, start: 8, end: 14, hours: 0 },
+        { key: `Wk 3 — ${monName}`, start: 15, end: 21, hours: 0 },
+        { key: `Wk 4 — ${monName}`, start: 22, end: 28, hours: 0 },
+        { key: `Wk 5 — ${monName}`, start: 29, end, hours: 0 },
       ];
       chartRows.forEach((r) => {
         const [, m, d] = r.date.split("-").map(Number);
@@ -609,7 +617,7 @@ export default function TaskMonitoring() {
         const b = buckets.find((bk) => d >= bk.start && d <= bk.end);
         if (b) b.hours += Number(r.hours || 0);
       });
-      return buckets.filter((b) => b.start <= end);
+      return buckets.filter((b) => b.start <= end).map((b) => ({ label: b.key, hours: b.hours }));
     }
     const map = {};
     chartRows.forEach((r) => {
@@ -620,6 +628,30 @@ export default function TaskMonitoring() {
       .sort()
       .map((k) => ({ label: monthLabel(k), hours: map[k] }));
   }, [chartRows, range]);
+
+  const yTicks = useMemo(() => {
+    const max = Math.max(0, ...hoursSeries.map((d) => Number(d.hours || 0)));
+    const makeTicks = (step, cap) => {
+      const m = typeof cap === "number" ? cap : Math.ceil(max / step) * step;
+      const arr = [];
+      for (let i = 0; i <= m; i += step) arr.push(i);
+      if (arr[arr.length - 1] !== m) arr.push(m);
+      return arr;
+    };
+
+    if (range === "day") {
+      const cap = Math.max(1, Math.min(24, Math.ceil(max)));
+      return makeTicks(1, cap);
+    }
+    if (range === "week") return makeTicks(1, 7);
+    if (range === "month") {
+      const weeks = hoursSeries.length; // 4 or 5
+      const cap = 10 * (weeks);
+      return makeTicks(10, cap);
+    }
+    const cap = Math.max(10, Math.ceil(max / 10) * 10);
+    return makeTicks(10, cap);
+  }, [hoursSeries, range]);
 
   /* ========== Render ========== */
   if (loading) {
@@ -634,10 +666,11 @@ export default function TaskMonitoring() {
 
   return (
     <AppLayout>
-      <div className="tasks-page px-2 py-2">
+      {/* compact class toggles only when trainer charts are visible */}
+      <div className={`tasks-page ${view.type === "trainer" ? "trainer-view" : ""} px-2 py-2`}>
         {errorBanner && <div className="alert alert-danger my-2">{errorBanner}</div>}
 
-        {/* Actions: Import / Export / Add */}
+        {/* Actions */}
         <div className="d-flex justify-content-end mb-2 gap-2">
           <input
             type="file"
@@ -658,7 +691,7 @@ export default function TaskMonitoring() {
         </div>
 
         {/* Header + Range */}
-        <div className="card bg-body-tertiary border-3 rounded-3 shadow">
+        <div className="card bg-body-tertiary border-3 rounded-3 shadow tasks-card">
           <div className={`card-header bg-warning-subtle text-warning-emphasis tasks-toolbar ${view.type === "trainer" ? "has-back" : ""}`}>
             <div className="d-flex align-items-center gap-2 flex-wrap pb-2">
               {view.type === "trainer" && (
@@ -692,7 +725,6 @@ export default function TaskMonitoring() {
             <table className="table table-hover tasks-table">
               <thead className="text-center">
                 <tr>
-                  {/* <Th label="ID" k="id" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} /> */}
                   <Th label="Date" k="date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Trainer (ID)" k="trainer" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Project" k="project" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -712,7 +744,6 @@ export default function TaskMonitoring() {
               <tbody className="text-center">
                 {pageRows.map((r) => (
                   <tr key={r.id}>
-                    {/* <td className="text-muted">#{r.id}</td> */}
                     <td>{r.date}</td>
                     <td>
                       {view.type !== "trainer" ? (
@@ -773,7 +804,7 @@ export default function TaskMonitoring() {
               <div className="card shadow-sm h-100">
                 <div className="card-header"><h6 className="mb-0"># of Tasks by Status — {rangeSuffix}</h6></div>
                 <div className="card-body">
-                  <div style={{ width: "100%", height: 260 }}>
+                  <div style={{ width: "100%", height: 210 }}>
                     <ResponsiveContainer>
                       <PieChart>
                         <Tooltip />
@@ -794,12 +825,16 @@ export default function TaskMonitoring() {
               <div className="card shadow-sm h-100">
                 <div className="card-header"><h6 className="mb-0">Hours Logged — {rangeSuffix}</h6></div>
                 <div className="card-body">
-                  <div style={{ width: "100%", height: 260 }}>
+                  <div style={{ width: "100%", height: 210 }}>
                     <ResponsiveContainer>
                       <BarChart data={hoursSeries}>
                         <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
-                        <XAxis dataKey="label" />
-                        <YAxis allowDecimals={false} />
+                        <XAxis dataKey="label" interval={0} />
+                        <YAxis
+                          allowDecimals={false}
+                          ticks={yTicks}
+                          domain={[0, yTicks.length ? yTicks[yTicks.length - 1] : 'auto']}
+                        />
                         <Tooltip />
                         <Legend />
                         <Bar dataKey="hours" fill="#0d6efd" radius={[6, 6, 0, 0]} maxBarSize={110} />
@@ -812,7 +847,7 @@ export default function TaskMonitoring() {
           </div>
         )}
 
-        {/* Add/Edit Modal — matches your original layout */}
+        {/* Add/Edit Modal */}
         {showModal && (
           <>
             <div className="modal fade show d-block" tabIndex="-1" role="dialog" aria-modal="true">
