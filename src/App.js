@@ -8,9 +8,7 @@ import Dashboard from "./sections/features/pages/Dashboard";
 import ProjectList from "./sections/features/pages/ProjectList";
 import ResourceList from "./sections/features/pages/ResourceList";
 import TaskMonitoring from "./sections/features/pages/TaskMonitoring";
-
-// Adjust this import path to wherever you placed ErrorModal.jsx
-import ErrorModal from "./sections/features/ErrorModal";
+import ErrorModal from "./sections/features/components/ErrorModal";
 
 /** Catch-all 404 that shows modal then routes to Login */
 function NotFoundRedirect() {
