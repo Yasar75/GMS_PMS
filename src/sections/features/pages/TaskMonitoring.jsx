@@ -1,3 +1,5 @@
+
+
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import AppLayout from "../components/AppLayout";
 import "./TaskMonitoring.css";
@@ -117,7 +119,7 @@ export default function TaskMonitoring() {
 
   // ALIGNMENT: hard cap visible rows
   const PAGE_OVERVIEW = 10;
-  const PAGE_TRAINER = 5;
+  const PAGE_TRAINER = 4;
   const [page, setPage] = useState(1);
 
   const toggleSort = (k) => {
@@ -728,8 +730,8 @@ export default function TaskMonitoring() {
                   <Th label="Date" k="date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Trainer (ID)" k="trainer" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Project" k="project" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <Th label="Manager" k="manager" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <Th label="Lead" k="lead" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="GMS Manager" k="manager" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="Turing Manager" k="lead" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Pod Lead" k="podLead" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Hours" k="hours" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="In Progress" k="inProgress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -804,7 +806,7 @@ export default function TaskMonitoring() {
               <div className="card shadow-sm h-100">
                 <div className="card-header"><h6 className="mb-0"># of Tasks by Status — {rangeSuffix}</h6></div>
                 <div className="card-body">
-                  <div style={{ width: "100%", height: 210 }}>
+                  <div style={{ width: "100%", height: 250 }}>
                     <ResponsiveContainer>
                       <PieChart>
                         <Tooltip />
@@ -825,7 +827,7 @@ export default function TaskMonitoring() {
               <div className="card shadow-sm h-100">
                 <div className="card-header"><h6 className="mb-0">Hours Logged — {rangeSuffix}</h6></div>
                 <div className="card-body">
-                  <div style={{ width: "100%", height: 210 }}>
+                  <div style={{ width: "100%", height: 250 }}>
                     <ResponsiveContainer>
                       <BarChart data={hoursSeries}>
                         <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
@@ -904,12 +906,12 @@ export default function TaskMonitoring() {
                           </div>
 
                           <div className="col-12 col-md-6">
-                            <label className="form-label">Manager <span className="text-danger">*</span></label>
+                            <label className="form-label">GMS Manager <span className="text-danger">*</span></label>
                             <input className="form-control bg-light" value={form.manager} disabled />
                           </div>
 
                           <div className="col-12 col-md-6">
-                            <label className="form-label">Lead <span className="text-danger">*</span></label>
+                            <label className="form-label">Turing Manager <span className="text-danger">*</span></label>
                             <input className="form-control bg-light" value={form.lead} disabled />
                           </div>
 

@@ -408,7 +408,7 @@ export default function Dashboard() {
                   <ResponsiveContainer>
                     <BarChart data={statusBarData}>
                       <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
-                      <XAxis dataKey="label" />
+                      <XAxis className = "barChartLabel"  dataKey="label" />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
                       <Bar dataKey="value" maxBarSize={48} radius={[4, 4, 0, 0]} fill="#b7d3f9" stroke="#b7d3f9" />

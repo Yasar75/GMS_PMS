@@ -108,6 +108,7 @@
   align-items: center;
   gap: 0.25rem;
   color: inherit;
+  font-size: 13px;
 }
 .tasks-table th.sortable .sort-icon {
   opacity: 0.6;
@@ -153,7 +154,7 @@
 }
 
 /* Trainer view compacting to eliminate page scroll */
-.trainer-view .card {
+/* .trainer-view .card {
   border-radius: 10px;
 }
 .trainer-view .card-header {
@@ -161,13 +162,13 @@
 }
 .trainer-view .card-body {
   padding: 6px 8px;
-}
+} */
 
 /* Charts sizing (hard cap) */
-.trainer-view .card .recharts-responsive-container,
+/* .trainer-view .card .recharts-responsive-container,
 .trainer-view .card .recharts-wrapper {
   height: var(--chart-h) !important;
-}
+} */
 
 /* Pagination/footer band compaction */
 .card .px-3.py-2 {

@@ -1,4 +1,3 @@
-// src/api/features.js
 import http from "./client";
 
 /** Extract a human-readable message from FastAPI-style payloads */

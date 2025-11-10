@@ -70,6 +70,10 @@
   min-height: 0; 
 }
 
+.chart-fill .barChartLabel{
+  font-size: 13px;
+}
+
 .pm-dashboard .btn {
   border-radius: 8px;
 }
@@ -156,3 +160,5 @@
   min-height: var(--dash-card-header-h);
   padding: 0.5rem 0.75rem;
 }
+
+

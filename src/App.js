@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Routes, Route, Link, Navigate, useNavigate } from "react-router-dom";
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./sections/auth/pages/Login";
 import Register from "./sections/auth/pages/Register";
@@ -8,65 +8,47 @@ import Dashboard from "./sections/features/pages/Dashboard";
 import ProjectList from "./sections/features/pages/ProjectList";
 import ResourceList from "./sections/features/pages/ResourceList";
 import TaskMonitoring from "./sections/features/pages/TaskMonitoring";
+
+import RequireAuth from "./api/RequireAuth";
+import IdleSession from "./api/IdleSession";
 import ErrorModal from "./sections/features/components/ErrorModal";
+import { isAuthenticated } from "./api/authSession";
 
-/** Catch-all 404 that shows modal then routes to Login */
 function NotFoundRedirect() {
-  const navigate = useNavigate();
-  const [show] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => navigate("/", { replace: true }), 3000);
-    return () => clearTimeout(t);
-  }, [navigate]);
-
-  const handleClose = () => navigate("/", { replace: true });
-
   return (
     <ErrorModal
-      show={show}
+      show
       title="Not Found"
-      message={
-        <div>
-          The page you’re looking for doesn’t exist.
-          <div className="mt-2 small text-muted">Redirecting to Login…</div>
-        </div>
-      }
-      onHide={handleClose}
+      message="The page you’re looking for doesn’t exist. Redirecting to Login…"
+      onHide={() => {}}
       size="sm"
     />
   );
 }
 
-function App() {
+export default function App() {
   return (
-    <div>
+    <>
+      <IdleSession />
       <Routes>
         {/* Auth */}
-        <Route path="/" element={<Login />} />
+        <Route
+          path="/"
+          element={isAuthenticated() ? <Navigate to="/dashboard" replace /> : <Login />}
+        />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot" element={<ForgotPassword />} />
 
-        {/* Features */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/projects" element={<ProjectList />} />
-        <Route path="/resources" element={<ResourceList />} />
-        <Route path="/tasks" element={<TaskMonitoring />} />
+        {/* Protected */}
+        <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/projects"  element={<RequireAuth><ProjectList /></RequireAuth>} />
+        <Route path="/resources" element={<RequireAuth><ResourceList /></RequireAuth>} />
+        <Route path="/tasks"     element={<RequireAuth><TaskMonitoring /></RequireAuth>} />
 
-        {/* 404 -> modal + timed redirect */}
+        {/* 404 */}
         <Route path="*" element={<NotFoundRedirect />} />
       </Routes>
-
-      {/* Fallback (optional) if router fails to mount */}
-      <noscript>
-        <div className="text-center text-white p-4">
-          <h4>Not Found</h4>
-          <Link to="/" className="btn btn-light mt-3">Go to Login</Link>
-        </div>
-      </noscript>
-    </div>
+    </>
   );
 }
-
-export default App;
