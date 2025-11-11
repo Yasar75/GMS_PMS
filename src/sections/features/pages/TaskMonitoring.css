@@ -153,24 +153,62 @@
   text-decoration: underline;
 }
 
-/* Trainer view compacting to eliminate page scroll */
-/* .trainer-view .card {
-  border-radius: 10px;
+/* Axis hint under charts */
+.axis-hint {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 4px;
+  color: #6c757d;
 }
-.trainer-view .card-header {
-  padding: 6px 10px;
-}
-.trainer-view .card-body {
-  padding: 6px 8px;
-} */
-
-/* Charts sizing (hard cap) */
-/* .trainer-view .card .recharts-responsive-container,
-.trainer-view .card .recharts-wrapper {
-  height: var(--chart-h) !important;
-} */
 
 /* Pagination/footer band compaction */
 .card .px-3.py-2 {
   padding: 6px 10px !important;
+}
+
+.chart-fill {
+  position: relative; 
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+/* Make tooltip non-interactive so it never captures scroll/hover */
+.chart-fill .recharts-tooltip-wrapper {
+  pointer-events: none;
+  white-space: nowrap; /* prevents multi-line growth at edges */
+}
+
+/* ----------------- Responsive hardening ----------------- */
+@media (max-width: 992px) {
+  .tasks-table td,
+  .tasks-table th {
+    padding: 0.25rem 0.35rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .tasks-toolbar .title {
+    font-size: 0.92rem;
+  }
+  .tasks-toolbar .hint {
+    display: none; /* collapse on small screens */
+  }
+  .tasks-card .tasks-toolbar.has-back {
+    --back-slot: 64px; /* shrink back button slot */
+  }
+}
+
+@media (max-width: 576px) {
+  .tasks-page {
+    padding: 4px; /* tighter on phones */
+  }
+  .tasks-table th.sortable > button.sort-btn {
+    font-size: 12px;
+  }
+  .tasks-table td {
+    font-size: 12px;
+  }
+  .tasks-card .tasks-toolbar.has-back {
+    --back-slot: 54px; /* even tighter on xs */
+  }
 }

@@ -68,6 +68,15 @@
 .chart-fill {
   flex: 1 1 auto;
   min-height: 0;
+  position: relative; 
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+/* Make tooltip non-interactive so it never captures scroll/hover */
+.chart-fill .recharts-tooltip-wrapper {
+  pointer-events: none;
+  white-space: nowrap; /* prevents multi-line growth at edges */
 }
 
 /* --- Responsive tick sizing for small viewports --- */
@@ -176,4 +185,16 @@
 .card .card-header {
   min-height: var(--dash-card-header-h);
   padding: 0.5rem 0.75rem;
+}
+
+
+/* --- Responsive tick sizing for small viewports (charts only) --- */
+@media (max-width: 1280px) {
+  .chart-fill .barChartLabel { font-size: 10px; }
+}
+@media (max-width: 992px) {
+  .chart-fill .barChartLabel { font-size: 9px; }
+}
+@media (max-width: 768px) {
+  .chart-fill .barChartLabel { font-size: 8px; }
 }

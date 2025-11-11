@@ -6,7 +6,7 @@ import {
   ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis,
   BarChart, Bar,
   AreaChart, Area,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, LabelList
 } from "recharts";
 import { dashboardData } from "../../../api/features";
 import "./Dashboard.css";
@@ -406,21 +406,23 @@ export default function Dashboard() {
               <div className="card-body chart-body">
                 <div className="chart-fill">
                   <ResponsiveContainer>
-                    <BarChart data={statusBarData}>
+                    <BarChart data={statusBarData} margin={{ top: 20 }}>
                       <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
                       <XAxis
                         className="barChartLabel"
                         dataKey="label"
-                        interval={0}          
-                        angle={-25}           
-                        textAnchor="end"      
-                        tickMargin={10}       
-                        height={60}          
+                        interval={0}
+                        angle={-25}
+                        textAnchor="end"
+                        tickMargin={10}
+                        height={60}
                         tick={{ fontSize: 10 }}
                       />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="value" maxBarSize={48} radius={[4, 4, 0, 0]} fill="#b7d3f9" stroke="#b7d3f9" />
+                      <Bar dataKey="value" maxBarSize={48} radius={[4, 4, 0, 0]} fill="#b7d3f9" stroke="#b7d3f9">
+                        <LabelList dataKey="value" position="top" />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -437,15 +439,19 @@ export default function Dashboard() {
               <div className="card-body chart-body">
                 <div className="chart-fill">
                   <ResponsiveContainer>
-                    <AreaChart data={hoursByProject}>
-                      <defs>
-                        <linearGradient id="hrsFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3b81d6" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#3b81d6" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
+                    <AreaChart data={hoursByProject} margin={{ top: 24, right: 24 }}>
+                      <defs> ... </defs>
                       <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
-                      <XAxis dataKey="project" />
+                      <XAxis
+                        className="barChartLabel"
+                        dataKey="project"
+                        interval={0}
+                        angle={-25}
+                        textAnchor="end"
+                        tickMargin={10}
+                        height={60}
+                        tick={{ fontSize: 10 }}
+                      />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
                       <Area
@@ -456,7 +462,9 @@ export default function Dashboard() {
                         fill="url(#hrsFill)"
                         dot={{ r: 3 }}
                         activeDot={{ r: 5 }}
-                      />
+                      >
+                        <LabelList dataKey="hours" position="top" offset={8} />
+                      </Area>
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>

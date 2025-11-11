@@ -1,5 +1,3 @@
-
-
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import AppLayout from "../components/AppLayout";
 import "./TaskMonitoring.css";
@@ -21,7 +19,7 @@ import PaginationBar from "../components/PaginationBar";
 
 import {
   ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LabelList,
   PieChart, Pie, Cell,
 } from "recharts";
 
@@ -47,8 +45,8 @@ const toMonShort = (d) => d.toLocaleDateString("en-US", { month: "short" });
 /* Export / Import CSV */
 const toCsv = (rows) => {
   const cols = [
-    "id","date","trainerId","trainer","project_id","project","manager","lead","podLead",
-    "hours","inProgress","taskCompleted","reworked","approved","rejected","reviewed"
+    "id", "date", "trainerId", "trainer", "project_id", "project", "manager", "lead", "podLead",
+    "hours", "inProgress", "taskCompleted", "reworked", "approved", "rejected", "reviewed"
   ];
   if (!rows?.length) return cols.join(",") + "\n";
   const head = cols.join(",");
@@ -101,6 +99,22 @@ const Th = ({ label, k, sortKey, sortDir, onSort }) => {
     </th>
   );
 };
+
+const compactTick = (value) => {
+  const parts = String(value).split(" ");
+  return parts.length >= 3 ? `${parts[1]} ${parts[2]}` : value;
+};
+
+// Round up to a "nice" number (1, 2, 5, 10 × 10^k)
+const niceCeil = (x) => {
+  if (!Number.isFinite(x) || x <= 0) return 1;
+  const e = Math.floor(Math.log10(x));
+  const base = Math.pow(10, e);
+  const candidates = [1, 2, 5, 10].map((m) => m * base);
+  for (const c of candidates) if (x <= c) return c;
+  return 10 * base;
+};
+
 
 /* =================== Component =================== */
 export default function TaskMonitoring() {
@@ -193,39 +207,40 @@ export default function TaskMonitoring() {
 
         const projs = Array.isArray(projsRes?.data)
           ? projsRes.data.map((p) => ({
-              project_id: String(p.project_id ?? p.id ?? ""),
-              project_name: p.project_name ?? p.name ?? "",
-              gms_manager: p.gms_manager ?? p.manager ?? "",
-              t_manager: p.t_manager ?? p.lead ?? p.lead_name ?? "",
-              pod_lead: p.pod_lead ?? p.pod_name ?? "",
-              employees_id: String(p.employees_id ?? ""),
-              status: String(p.status ?? "1"),
-            }))
+            project_id: String(p.project_id ?? p.id ?? ""),
+            project_name: p.project_name ?? p.name ?? "",
+            gms_manager: p.gms_manager ?? p.manager ?? "",
+            t_manager: p.t_manager ?? p.lead ?? p.lead_name ?? "",
+            pod_lead: p.pod_lead ?? p.pod_name ?? "",
+            employees_id: String(p.employees_id ?? ""),
+            status: String(p.status ?? "1"),
+          }))
           : [];
         setProjects(projs);
 
         const tasks = Array.isArray(tasksRes?.data)
           ? tasksRes.data.map((t) => ({
-              id: Number(t.task_id || 0),
-              date: t.task_date || t.date || TODAY,
-              trainerId: String(t.employees_id || ""),
-              trainer:
-                (t.first_name && t.last_name)
-                  ? `${t.first_name} ${t.last_name}`.trim()
-                  : (t.trainer_name || ""),
-              project_id: String(t.project_id || ""),
-              project: t.project_name || "",
-              manager: t.gms_manager || t.manager || "",
-              lead: t.t_manager || t.lead || t.lead_name || "",
-              podLead: t.pod_lead || t.pod_name || "",
-              hours: Number(t.hours_logged || 0),
-              inProgress: Number(t.task_inprogress || 0),
-              taskCompleted: Number(t.task_completed || 0),
-              reworked: Number(t.task_reworked || t.reworked || 0),
-              approved: Number(t.task_approved || 0),
-              rejected: Number(t.task_rejected || t.rejected || 0),
-              reviewed: Number(t.task_reviewed || t.reviewed || 0),
-            }))
+            id: Number(t.task_id || 0),
+            date: t.task_date || t.date || TODAY,
+            trainerId: String(t.employees_id || ""),
+            trainer:
+              (t.first_name && t.last_name)
+                ? `${t.first_name} ${t.last_name}`.trim()
+                : (t.trainer_name || ""),
+            project_id: String(t.project_id || ""),
+            project: t.project_name || "",
+            manager: t.gms_manager || t.manager || "",
+            lead: t.t_manager || t.lead || t.lead_name || "",
+            podLead: t.pod_lead || t.pod_name || "",
+            hours: Number(t.hours_logged || 0),
+            overtime: Number(t.hours_logged || 0) > 8,
+            inProgress: Number(t.task_inprogress || 0),
+            taskCompleted: Number(t.task_completed || 0),
+            reworked: Number(t.task_reworked || t.reworked || 0),
+            approved: Number(t.task_approved || 0),
+            rejected: Number(t.task_rejected || t.rejected || 0),
+            reviewed: Number(t.task_reviewed || t.reviewed || 0),
+          }))
           : [];
 
         setRows(tasks.map((r) => ({ ...r, trainer: r.trainer || nameById[r.trainerId] || r.trainerId })));
@@ -313,7 +328,12 @@ export default function TaskMonitoring() {
 
   const onEdit = (r) => {
     setMode("edit");
-    setForm({ ...emptyForm, ...r, project_id: String(r.project_id || "") });
+    setForm({
+      ...emptyForm,
+      ...r,
+      project_id: String(r.project_id || ""),
+      overtime: Boolean(r?.overtime ?? (Number(r?.hours || 0) > 8)), // <= key line
+    });
     setSubmitted(false);
     setShowModal(true);
   };
@@ -461,26 +481,26 @@ export default function TaskMonitoring() {
           prev.map((r) =>
             r.id === form.id
               ? {
-                  ...r,
-                  date: updated.task_date || payload.task_date,
-                  trainerId: String(updated.employees_id || payload.employees_id),
-                  trainer:
-                    (updated.first_name && updated.last_name)
-                      ? `${updated.first_name} ${updated.last_name}`.trim()
-                      : (updated.trainer_name || form.trainer),
-                  project_id: String(updated.project_id || payload.project_id),
-                  project: updated.project_name || form.project,
-                  manager: updated.gms_manager || form.manager,
-                  lead: updated.t_manager || form.lead,
-                  podLead: updated.pod_lead || form.podLead,
-                  hours: Number(updated.hours_logged ?? payload.hours_logged),
-                  inProgress: Number(updated.task_inprogress ?? payload.task_inprogress),
-                  taskCompleted: Number(updated.task_completed ?? payload.task_completed),
-                  reworked: Number(updated.task_reworked ?? payload.task_reworked),
-                  approved: Number(updated.task_approved ?? payload.task_approved),
-                  rejected: Number(updated.task_rejected ?? payload.task_rejected),
-                  reviewed: Number(updated.task_reviewed ?? payload.task_reviewed),
-                }
+                ...r,
+                date: updated.task_date || payload.task_date,
+                trainerId: String(updated.employees_id || payload.employees_id),
+                trainer:
+                  (updated.first_name && updated.last_name)
+                    ? `${updated.first_name} ${updated.last_name}`.trim()
+                    : (updated.trainer_name || form.trainer),
+                project_id: String(updated.project_id || payload.project_id),
+                project: updated.project_name || form.project,
+                manager: updated.gms_manager || form.manager,
+                lead: updated.t_manager || form.lead,
+                podLead: updated.pod_lead || form.podLead,
+                hours: Number(updated.hours_logged ?? payload.hours_logged),
+                inProgress: Number(updated.task_inprogress ?? payload.task_inprogress),
+                taskCompleted: Number(updated.task_completed ?? payload.task_completed),
+                reworked: Number(updated.task_reworked ?? payload.task_reworked),
+                approved: Number(updated.task_approved ?? payload.task_approved),
+                rejected: Number(updated.task_rejected ?? payload.task_rejected),
+                reviewed: Number(updated.task_reviewed ?? payload.task_reviewed),
+              }
               : r
           )
         );
@@ -633,27 +653,28 @@ export default function TaskMonitoring() {
 
   const yTicks = useMemo(() => {
     const max = Math.max(0, ...hoursSeries.map((d) => Number(d.hours || 0)));
+
     const makeTicks = (step, cap) => {
-      const m = typeof cap === "number" ? cap : Math.ceil(max / step) * step;
+      const m = typeof cap === "number" ? cap : 0;
       const arr = [];
       for (let i = 0; i <= m; i += step) arr.push(i);
       if (arr[arr.length - 1] !== m) arr.push(m);
       return arr;
     };
 
-    if (range === "day") {
-      const cap = Math.max(1, Math.min(24, Math.ceil(max)));
+    // Pick a "nice" ceiling so 7 -> 10, 35 -> 50, 122 -> 200, etc.
+    const cap = niceCeil(max);
+
+    // Steps: fine-grained for Day/Week; coarser for Month/Overall
+    if (range === "day" || range === "week") {
       return makeTicks(1, cap);
     }
-    if (range === "week") return makeTicks(1, 7);
-    if (range === "month") {
-      const weeks = hoursSeries.length; // 4 or 5
-      const cap = 10 * (weeks);
-      return makeTicks(10, cap);
-    }
-    const cap = Math.max(10, Math.ceil(max / 10) * 10);
-    return makeTicks(10, cap);
+
+    // Month/Overall — choose an intelligible step from the cap
+    const step = cap <= 20 ? 2 : cap <= 50 ? 5 : 10;
+    return makeTicks(step, cap);
   }, [hoursSeries, range]);
+
 
   /* ========== Render ========== */
   if (loading) {
@@ -707,7 +728,7 @@ export default function TaskMonitoring() {
                 ) : "Task Tracking"}
               </div>
 
-              <div className="btn-group ms-2" role="group" aria-label="range">
+              <div className="btn-group ms-2 flex-wrap" role="group" aria-label="range">
                 {["day", "week", "month", "overall"].map((r) => (
                   <button
                     key={r}
@@ -810,10 +831,23 @@ export default function TaskMonitoring() {
                     <ResponsiveContainer>
                       <PieChart>
                         <Tooltip />
-                        <Legend />
-                        <Pie data={statusDonut} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={3}>
+                        {/* Legend shows counts inline as "Approved: 7", "Completed: 56", etc. */}
+                        <Legend
+                          wrapperStyle={{ fontSize: 12 }}
+                          formatter={(name, entry) => `${name}: ${entry?.payload?.value ?? 0}`}
+                        />
+                        <Pie
+                          data={statusDonut}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={55}
+                          outerRadius={95}
+                          paddingAngle={3}
+                          labelLine={false}
+                        // remove any existing `label={...}` prop here
+                        >
                           {statusDonut.map((_, i) => (
-                            <Cell key={i} fill={["#198754","#ffc107","#0d6efd","#6c757d","#dc3545","#0dcaf0"][i % 6]} />
+                            <Cell key={i} fill={["#198754", "#ffc107", "#0d6efd", "#6c757d", "#dc3545", "#0dcaf0"][i % 6]} />
                           ))}
                         </Pie>
                       </PieChart>
@@ -827,21 +861,45 @@ export default function TaskMonitoring() {
               <div className="card shadow-sm h-100">
                 <div className="card-header"><h6 className="mb-0">Hours Logged — {rangeSuffix}</h6></div>
                 <div className="card-body">
-                  <div style={{ width: "100%", height: 250 }}>
+                  <div className="chart-fill" style={{ width: "100%", height: 250 }}>
                     <ResponsiveContainer>
-                      <BarChart data={hoursSeries}>
+                      <BarChart data={hoursSeries} margin={{ top: 22, right: 8, left: 8, bottom: 10 }}>
                         <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
-                        <XAxis dataKey="label" interval={0} />
+
+                        {/* X axis: compact labels, slight angle, more spacing; no axis title */}
+                        <XAxis
+                          dataKey="label"
+                          tickFormatter={compactTick}
+                          interval="preserveStartEnd"
+                          minTickGap={10}
+                          tick={{ fontSize: 10 }}
+                          angle={-25}
+                          height={48}
+                          tickMargin={6}
+                          allowDuplicatedCategory={false}
+                        />
+
+                        {/* Y axis: keep ticks; no axis title */}
                         <YAxis
                           allowDecimals={false}
                           ticks={yTicks}
                           domain={[0, yTicks.length ? yTicks[yTicks.length - 1] : 'auto']}
+                          tick={{ fontSize: 10 }}
                         />
                         <Tooltip />
-                        <Legend />
-                        <Bar dataKey="hours" fill="#0d6efd" radius={[6, 6, 0, 0]} maxBarSize={110} />
+                        <Legend
+                          verticalAlign="bottom"
+                          align="center"     
+                          wrapperStyle={{ marginTop: 4 }}
+                          content={() => <div className="axis-hint">Hours ⬆️ • Dates ➡️</div>}
+                        />
+                        <Bar dataKey="hours" fill="#0d6efd" radius={[6, 6, 0, 0]} maxBarSize={110}>
+                          {/* Keep values on top of each bar */}
+                          <LabelList dataKey="hours" position="top" />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
+
                   </div>
                 </div>
               </div>

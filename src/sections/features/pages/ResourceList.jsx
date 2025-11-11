@@ -88,8 +88,8 @@ export default function ResourceList() {
   /* ---------- CSV helpers (Resources) ---------- */
   const toCsv = (rows) => {
     const cols = [
-      "id","name","role","roleName","gender","email","mobile","designation","skill",
-      "exp","qualification","state","city","start","end","status"
+      "id", "name", "role", "roleName", "gender", "email", "mobile", "designation", "skill",
+      "exp", "qualification", "state", "city", "start", "end", "status"
     ];
     if (!rows?.length) return cols.join(",") + "\n";
     const lines = rows.map((r) =>
@@ -186,7 +186,17 @@ export default function ResourceList() {
     else if (!mobileOk(form.mobile)) e.mobile = "10–12 digits.";
     if (!form.designation) e.designation = "Designation is required.";
     if (!form.skill) e.skill = "Skill is required.";
-    if (!form.exp) e.exp = "Experience is required.";
+    const expStr = (form.exp ?? "").toString().trim();
+    if (!expStr) {
+      e.exp = "Experience is required.";
+    } else {
+      const expVal = Number(expStr);
+      if (!Number.isFinite(expVal)) {
+        e.exp = "Enter a valid number (decimals allowed).";
+      } else if (expVal < 0) {
+        e.exp = "Experience cannot be negative.";
+      }
+    }
     if (!form.start) e.start = "Start date is required.";
     if (form.status === "0" && !form.end) e.end = "Inactive date is required.";
     // optional guardrails: no future dates
@@ -386,7 +396,7 @@ export default function ResourceList() {
       <div className="small">
         <div><strong>Name:</strong> {form.name}</div>
         <div><strong>ID:</strong> {form.id}</div>
-        <div><strong>Role:</strong> {roles.find((r)=>String(r.role_id)===String(form.role))?.role_name || form.roleName || "-"}</div>
+        <div><strong>Role:</strong> {roles.find((r) => String(r.role_id) === String(form.role))?.role_name || form.roleName || "-"}</div>
         <div><strong>Email:</strong> {form.email}</div>
         <div><strong>Mobile:</strong> {form.mobile}</div>
         <div><strong>Start:</strong> {form.start || "-"}</div>
@@ -553,8 +563,8 @@ export default function ResourceList() {
                       key={role}
                       type="button"
                       className={`btn btn-sm ${roleTab === role
-                          ? "btn-outline-primary active"
-                          : "btn-outline-secondary"
+                        ? "btn-outline-primary active"
+                        : "btn-outline-secondary"
                         }`}
                       aria-pressed={roleTab === role}
                       onClick={() => setRoleTab(role)}
@@ -831,12 +841,16 @@ export default function ResourceList() {
 
                           <div className="col-12 col-md-4">
                             <label className="form-label">
-                              Experience <span className="text-danger">*</span>
+                              Experience(years:) <span className="text-danger">*</span>
                             </label>
                             <input
                               className={`form-control ${submitted && errors.exp ? "is-invalid" : ""}`}
                               placeholder="e.g., 3"
                               value={form.exp}
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              inputMode="decimal"
                               onChange={(e) => setForm({ ...form, exp: e.target.value })}
                             />
                             {submitted && errors.exp && (
