@@ -1,9 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ErrorModal from "../sections/features/components/ErrorModal";
-import { clearToken, touchActivity, isIdle, isAuthenticated } from "./authSession";
+import {
+  clearToken,
+  touchActivity,
+  isIdle,
+  isAuthenticated,
+} from "../api/authSession"; // adjust path if yours differs
 
 const IDLE_MS = 2 * 60 * 1000; // 2 minutes
+const AUTH_EVENT = "auth:changed";
 
 export default function IdleSession() {
   const navigate = useNavigate();
@@ -15,7 +21,6 @@ export default function IdleSession() {
   const ticker = useRef(null);
   const detachActivityRef = useRef(() => {});
 
-  // --- helpers --------------------------------------------------------------
   const stopTicker = () => {
     if (ticker.current) clearInterval(ticker.current);
     ticker.current = null;
@@ -24,7 +29,7 @@ export default function IdleSession() {
   const startTicker = () => {
     stopTicker();
     ticker.current = setInterval(() => {
-      // bail out if logged out mid-cycle
+      // if we lost auth mid-cycle, stop everything
       if (!isAuthenticated()) {
         setAuthed(false);
         setExpired(false);
@@ -42,7 +47,7 @@ export default function IdleSession() {
     const bump = () => touchActivity();
     const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
     events.forEach((e) => window.addEventListener(e, bump, { passive: true }));
-    bump(); // seed
+    bump(); // seed lastActiveAt now
     detachActivityRef.current = () =>
       events.forEach((e) => window.removeEventListener(e, bump));
   };
@@ -52,25 +57,30 @@ export default function IdleSession() {
     detachActivityRef.current = () => {};
   };
 
-  // React to auth changes (same tab + cross tab)
+  // cross-tab auth sync
   useEffect(() => {
     const onStorage = (e) => {
-      if (e.key === "authToken") {
-        const nowAuthed = !!e.newValue;
-        setAuthed(nowAuthed);
-      }
+      if (e.key === "authToken") setAuthed(!!e.newValue);
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Turn the watcher on/off based on auth
+  // same-tab auth sync (from saveToken/clearToken)
+  useEffect(() => {
+    const h = () => setAuthed(isAuthenticated());
+    window.addEventListener(AUTH_EVENT, h);
+    return () => window.removeEventListener(AUTH_EVENT, h);
+  }, []);
+
+  // arm/disarm watcher based on auth state
   useEffect(() => {
     if (authed) {
+      setExpired(false);
       attachActivityListeners();
       startTicker();
     } else {
-      setExpired(false);           // no modal when logged out
+      setExpired(false);
       stopTicker();
       detachActivityListeners();
     }
@@ -80,17 +90,14 @@ export default function IdleSession() {
     };
   }, [authed]);
 
-  // Close => hide modal, clear token, flip authed false, redirect
   const handleClose = () => {
     setExpired(false);
-    clearToken();
-    setAuthed(false); // same-tab immediate effect (storage event won’t fire here)
+    clearToken();   // triggers AUTH_EVENT; authed -> false
     if (location.pathname !== "/") {
       navigate("/", { replace: true, state: { from: location } });
     }
   };
 
-  // If not logged in, render nothing (no modal, no listeners)
   if (!authed || !expired) return null;
 
   return (

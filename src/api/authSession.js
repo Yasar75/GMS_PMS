@@ -1,11 +1,23 @@
 const AUTH_KEY = "authToken";
 const LAST_ACTIVE_KEY = "lastActiveAt";
+const AUTH_EVENT = "auth:changed";
 
-export const saveToken = (token) => localStorage.setItem(AUTH_KEY, token);
+const notify = () => {
+  // notify same-tab listeners
+  window.dispatchEvent(new Event(AUTH_EVENT));
+};
+
+export const saveToken = (token) => {
+  localStorage.setItem(AUTH_KEY, token);
+  notify(); // <— tell the app we’re now authenticated
+};
+
 export const getToken = () => localStorage.getItem(AUTH_KEY);
+
 export const clearToken = () => {
   localStorage.removeItem(AUTH_KEY);
   localStorage.removeItem(LAST_ACTIVE_KEY);
+  notify(); // <— tell the app we’re now logged out
 };
 
 export const touchActivity = () =>
@@ -22,4 +34,11 @@ export const isIdle = (idleMs) => {
   const last = getLastActive();
   if (!last) return false;
   return Date.now() - last >= idleMs;
+};
+
+// Optional: subscribe helper if you ever want it elsewhere
+export const onAuthChange = (cb) => {
+  const h = () => cb(isAuthenticated());
+  window.addEventListener(AUTH_EVENT, h);
+  return () => window.removeEventListener(AUTH_EVENT, h);
 };
