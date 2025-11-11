@@ -1,55 +1,97 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ErrorModal from "../sections/features/components/ErrorModal";
-import { clearToken, touchActivity, isIdle } from "./authSession";
+import { clearToken, touchActivity, isIdle, isAuthenticated } from "./authSession";
 
 const IDLE_MS = 2 * 60 * 1000; // 2 minutes
 
 export default function IdleSession() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [expired, setExpired] = useState(false);
-  const ticker = useRef(null);
 
-  // ---- helpers -------------------------------------------------------------
-  const startTicker = () => {
+  const [authed, setAuthed] = useState(isAuthenticated());
+  const [expired, setExpired] = useState(false);
+
+  const ticker = useRef(null);
+  const detachActivityRef = useRef(() => {});
+
+  // --- helpers --------------------------------------------------------------
+  const stopTicker = () => {
     if (ticker.current) clearInterval(ticker.current);
+    ticker.current = null;
+  };
+
+  const startTicker = () => {
+    stopTicker();
     ticker.current = setInterval(() => {
+      // bail out if logged out mid-cycle
+      if (!isAuthenticated()) {
+        setAuthed(false);
+        setExpired(false);
+        stopTicker();
+        return;
+      }
       if (isIdle(IDLE_MS)) {
-        clearInterval(ticker.current);
+        stopTicker();
         setExpired(true);
       }
     }, 1000);
   };
 
-  // record activity on any interaction
-  useEffect(() => {
+  const attachActivityListeners = () => {
     const bump = () => touchActivity();
     const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
     events.forEach((e) => window.addEventListener(e, bump, { passive: true }));
-    bump();        // seed lastActiveAt on mount
-    startTicker(); // begin polling
-    return () => {
+    bump(); // seed
+    detachActivityRef.current = () =>
       events.forEach((e) => window.removeEventListener(e, bump));
-      if (ticker.current) clearInterval(ticker.current);
+  };
+
+  const detachActivityListeners = () => {
+    detachActivityRef.current?.();
+    detachActivityRef.current = () => {};
+  };
+
+  // React to auth changes (same tab + cross tab)
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "authToken") {
+        const nowAuthed = !!e.newValue;
+        setAuthed(nowAuthed);
+      }
     };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Close button: actually hide the modal, then logout + (optionally) redirect
-  const handleClose = () => {
-    setExpired(false);     
-    clearToken();          // drop auth
-    touchActivity();       // reset activity clock
-    startTicker();         // resume idle monitoring
+  // Turn the watcher on/off based on auth
+  useEffect(() => {
+    if (authed) {
+      attachActivityListeners();
+      startTicker();
+    } else {
+      setExpired(false);           // no modal when logged out
+      stopTicker();
+      detachActivityListeners();
+    }
+    return () => {
+      stopTicker();
+      detachActivityListeners();
+    };
+  }, [authed]);
 
-    // If you're on a protected route, send to login;
-    // if already on "/", this is a no-op but modal is closed now
+  // Close => hide modal, clear token, flip authed false, redirect
+  const handleClose = () => {
+    setExpired(false);
+    clearToken();
+    setAuthed(false); // same-tab immediate effect (storage event won’t fire here)
     if (location.pathname !== "/") {
       navigate("/", { replace: true, state: { from: location } });
     }
   };
 
-  if (!expired) return null;
+  // If not logged in, render nothing (no modal, no listeners)
+  if (!authed || !expired) return null;
 
   return (
     <ErrorModal
@@ -57,9 +99,8 @@ export default function IdleSession() {
       title="Session expired"
       message="You were inactive for 2 minutes. Please sign in again."
       onHide={handleClose}
-      size="sm"
-      // If your ErrorModal uses a different prop name, this covers both
       onClose={handleClose}
+      size="sm"
     />
   );
 }
