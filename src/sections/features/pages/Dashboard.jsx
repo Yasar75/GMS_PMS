@@ -230,7 +230,7 @@ export default function Dashboard() {
               {/* Range chips */}
               <div className="btn-group pm-chip-group" role="group" aria-label="range">
                 <button className={`btn btn-outline-secondary btn-sm ${range === "today" ? "active" : ""}`} onClick={setToday}>Today</button>
-                <button className={`btn btn-outline-secondary btn-sm ${range === "week" ? "active" : ""}`}  onClick={setWeek}>Week</button>
+                <button className={`btn btn-outline-secondary btn-sm ${range === "week" ? "active" : ""}`} onClick={setWeek}>Week</button>
                 <button className={`btn btn-outline-secondary btn-sm ${range === "month" ? "active" : ""}`} onClick={setMonth}>Month</button>
               </div>
 
@@ -408,7 +408,16 @@ export default function Dashboard() {
                   <ResponsiveContainer>
                     <BarChart data={statusBarData}>
                       <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
-                      <XAxis className = "barChartLabel"  dataKey="label" />
+                      <XAxis
+                        className="barChartLabel"
+                        dataKey="label"
+                        interval={0}          
+                        angle={-25}           
+                        textAnchor="end"      
+                        tickMargin={10}       
+                        height={60}          
+                        tick={{ fontSize: 10 }}
+                      />
                       <YAxis allowDecimals={false} />
                       <Tooltip />
                       <Bar dataKey="value" maxBarSize={48} radius={[4, 4, 0, 0]} fill="#b7d3f9" stroke="#b7d3f9" />
