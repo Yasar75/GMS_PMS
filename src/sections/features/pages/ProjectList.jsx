@@ -33,7 +33,7 @@ export default function ProjectList() {
 
   // filters
   const [q, setQ] = useState("");
-  const [fManager, setFManager] = useState("All GMS Manager");
+  const [fManager, setFManager] = useState("All GMS Coordinator");
   const [fLead, setFLead] = useState("All Turing Manager");
   const [fPodLead, setFPodLead] = useState("All Pod Leads");
   const [fTrainer, setFTrainer] = useState("All Trainers");
@@ -100,20 +100,20 @@ export default function ProjectList() {
 
         const projectData = Array.isArray(projRes?.data)
           ? projRes.data.map((p) => ({
-            id: p.project_id ?? p.id ?? "",
-            employees_id: p.employees_id ?? "",
-            name: (p.project_name ?? p.name ?? "").toString(),
-            manager: p.gms_manager ?? p.manager ?? "",
-            lead: p.t_manager ?? p.lead ?? p.lead_name ?? "",
-            podLead: p.pod_lead ?? p.podLead ?? p.pod_name ?? "",
-            trainer:
-              `${p.employee_first_name ?? ""} ${p.employee_last_name ?? ""}`.trim() ||
-              p.trainer_name ||
-              "",
-            start: p.active_at ?? p.create_at ?? "",
-            end: p.inactive_at ?? p.finish_at ?? null,
-            status: String(p.status ?? p.project_status ?? "1"),
-          }))
+              id: p.project_id ?? p.id ?? "",
+              employees_id: p.employees_id ?? "",
+              name: (p.project_name ?? p.name ?? "").toString(),
+              manager: p.gms_manager ?? p.manager ?? "",
+              lead: p.t_manager ?? p.lead ?? p.lead_name ?? "",
+              podLead: p.pod_lead ?? p.podLead ?? p.pod_name ?? "",
+              trainer:
+                `${p.employee_first_name ?? ""} ${p.employee_last_name ?? ""}`.trim() ||
+                p.trainer_name ||
+                "",
+              start: p.active_at ?? p.create_at ?? "",
+              end: p.inactive_at ?? p.finish_at ?? null,
+              status: String(p.status ?? p.project_status ?? "1"),
+            }))
           : [];
 
         setRows(projectData);
@@ -207,7 +207,7 @@ export default function ProjectList() {
     let d = [...rows];
 
     if (q.trim()) d = d.filter((r) => r.name.toLowerCase().includes(q.trim().toLowerCase()));
-    if (fManager !== "All GMS Manager") d = d.filter((r) => r.manager === fManager);
+    if (fManager !== "All GMS Coordinator") d = d.filter((r) => r.manager === fManager);
     if (fLead !== "All Turing Manager") d = d.filter((r) => r.lead === fLead);
     if (fPodLead !== "All Pod Leads") d = d.filter((r) => r.podLead === fPodLead);
     if (fTrainer !== "All Trainers") d = d.filter((r) => r.trainer === fTrainer);
@@ -237,7 +237,7 @@ export default function ProjectList() {
   useEffect(() => { setPage(1); }, [q, fManager, fLead, fPodLead, fTrainer, from, to, showInactive]);
 
   const resetFilters = () => {
-    setQ(""); setFManager("All GMS Manager"); setFLead("All Turing Manager");
+    setQ(""); setFManager("All GMS Coordinator"); setFLead("All Turing Manager");
     setFPodLead("All Pod Leads"); setFTrainer("All Trainers");
     setFrom(""); setTo("");
   };
@@ -399,17 +399,17 @@ export default function ProjectList() {
             r.id !== form.id
               ? r
               : {
-                ...r,
-                employees_id: updated.employees_id ?? payload.employees_id ?? r.employees_id,
-                name: updated.project_name ?? form.name,
-                manager: updated.gms_manager ?? form.manager,
-                lead: updated.t_manager ?? form.lead,
-                podLead: updated.pod_lead ?? form.podLead,
-                trainer: payload.trainer_name,
-                start: updated.active_at ?? startISO,
-                end: updated.inactive_at ?? (String(form.status) === "0" ? endISO : null),
-                status: String(updated.status ?? form.status),
-              }
+                  ...r,
+                  employees_id: updated.employees_id ?? payload.employees_id ?? r.employees_id,
+                  name: updated.project_name ?? form.name,
+                  manager: updated.gms_manager ?? form.manager,
+                  lead: updated.t_manager ?? form.lead,
+                  podLead: updated.pod_lead ?? form.podLead,
+                  trainer: payload.trainer_name,
+                  start: updated.active_at ?? startISO,
+                  end: updated.inactive_at ?? (String(form.status) === "0" ? endISO : null),
+                  status: String(updated.status ?? form.status),
+                }
           )
         );
         setSuccess({ show: true, message: "Project Data is updated" });
@@ -531,56 +531,56 @@ export default function ProjectList() {
 
               {/* search stays on the top line */}
               <div className="d-flex align-items-center gap-2">
-                <div className="input-group header-search">
-                  <span className="input-group-text bg-white">
-                    <i className="bi bi-search" />
-                  </span>
-                  <input
-                    className="form-control"
-                    placeholder="Search projects by name"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                  />
-                </div>
+              <div className="input-group header-search">
+                <span className="input-group-text bg-white">
+                  <i className="bi bi-search" />
+                </span>
+                <input
+                  className="form-control"
+                  placeholder="Search by ID / Name / Email / etc...."
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                />
               </div>
+            </div>
             </div>
 
             {/* SECOND LINE: filters + date range */}
             <div className="d-flex align-items-center justify-content-end flex-wrap gap-2 mt-2 pl-filter">
               <div className="d-flex align-items-center gap-2 flex-wrap">
-                <i className="bi bi-funnel me-1 opacity-75" />
+              <i className="bi bi-funnel me-1 opacity-75" />
 
-                <CustomDropdown
-                  label="All GMS Manager"
-                  value={fManager}
-                  items={["All GMS Manager", ...managers]}
-                  onChange={setFManager}
-                />
-                <CustomDropdown
-                  label="All Turing Manager"
-                  value={fLead}
-                  items={["All Turing Manager", ...leads]}
-                  onChange={setFLead}
-                />
-                <CustomDropdown
-                  label="All Pod Leads"
-                  value={fPodLead}
-                  items={["All Pod Leads", ...podLeads]}
-                  onChange={setFPodLead}
-                />
-                <CustomDropdown
-                  label="All Trainers"
-                  value={fTrainer}
-                  items={["All Trainers", ...trainers]}
-                  onChange={setFTrainer}
-                />
+              <CustomDropdown
+                label="All GMS Coordinator"
+                value={fManager}
+                items={["All GMS Coordinator", ...managers]}
+                onChange={setFManager}
+              />
+              <CustomDropdown
+                label="All Turing Manager"
+                value={fLead}
+                items={["All Turing Manager", ...leads]}
+                onChange={setFLead}
+              />
+              <CustomDropdown
+                label="All Pod Leads"
+                value={fPodLead}
+                items={["All Pod Leads", ...podLeads]}
+                onChange={setFPodLead}
+              />
+              <CustomDropdown
+                label="All Trainers"
+                value={fTrainer}
+                items={["All Trainers", ...trainers]}
+                onChange={setFTrainer}
+              />
                 <div className="d-flex align-items-center gap-2">
-                  <input
-                    placeholder="From Date"
-                    type="text"
-                    className="form-control date-input"
-                    value={from}
-                    onChange={(e) => setFrom(e.target.value)}
+              <input
+                placeholder="From Date"
+                type="text"
+                className="form-control date-input"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
                     onFocus={(e) => {
                       e.target.type = "date";
                       if (from) e.target.value = toYMD(from);
@@ -590,13 +590,13 @@ export default function ProjectList() {
                       e.target.type = "text";
                       setFrom(picked ? toDMY(picked) : "");
                     }}
-                  />
-                  <input
-                    placeholder="To Date"
-                    type="text"
-                    className="form-control date-input"
-                    value={to}
-                    onChange={(e) => setTo(e.target.value)}
+              />
+              <input
+                placeholder="To Date"
+                type="text"
+                className="form-control date-input"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
                     onFocus={(e) => {
                       e.target.type = "date";
                       if (to) e.target.value = toYMD(to);
@@ -606,16 +606,16 @@ export default function ProjectList() {
                       e.target.type = "text";
                       setTo(picked ? toDMY(picked) : "");
                     }}
-                  />
+              />
                 </div>
                 <button
                   className="btn btn-outline-secondary d-flex align-items-center"
                   onClick={resetFilters}
                 >
-                  <i className="bi bi-arrow-counterclockwise me-1" /> Reset
-                </button>
-              </div>
+                <i className="bi bi-arrow-counterclockwise me-1" /> Reset
+              </button>
             </div>
+          </div>
           </div>
 
           {/* TABLE */}
@@ -714,7 +714,7 @@ export default function ProjectList() {
                           </div>
 
                           <div className="col-12 col-md-6">
-                            <label className="form-label">GMS Manager Name <span className="text-danger">*</span></label>
+                            <label className="form-label">GMS Coordinator Name <span className="text-danger">*</span></label>
                             <input
                               list="managersList"
                               className={`form-control ${submitted && errors.manager ? "is-invalid" : ""}`}
@@ -755,7 +755,7 @@ export default function ProjectList() {
                           </div>
 
                           <div className="col-12 col-md-6 col-lg-6">
-                            <label className="form-label">Trainer <span className="text-danger">*</span></label>
+                            <label className="form-label">Resource Name <span className="text-danger">*</span></label>
                             <SearchableSelect
                               items={trainersList}
                               value={form.trainer}

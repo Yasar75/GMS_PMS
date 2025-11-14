@@ -144,6 +144,7 @@ export default function TaskMonitoring() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorBanner, setErrorBanner] = useState(null);
+  const [isBillable, setIsBillable] = useState(false);
 
   /* ---------- view controls ---------- */
   const [range, setRange] = useState("day"); // day | week | month | overall
@@ -196,10 +197,10 @@ export default function TaskMonitoring() {
     overtime: false,
     taskCompleted: 0,
     reworked: 0,
-    inProgress: 0,
     approved: 0,
     rejected: 0,
     reviewed: 0,
+    description: "",
   };
   const [showModal, setShowModal] = useState(false);
   const [mode, setMode] = useState("add");
@@ -259,12 +260,12 @@ export default function TaskMonitoring() {
             podLead: t.pod_lead || t.pod_name || "",
             hours: Number(t.hours_logged || 0),
             overtime: Number(t.hours_logged || 0) > 8,
-            inProgress: Number(t.task_inprogress || 0),
             taskCompleted: Number(t.task_completed || 0),
             reworked: Number(t.task_reworked || t.reworked || 0),
             approved: Number(t.task_approved || 0),
             rejected: Number(t.task_rejected || t.rejected || 0),
             reviewed: Number(t.task_reviewed || t.reviewed || 0),
+            description: t.description || "",
           }))
           : [];
 
@@ -374,6 +375,7 @@ export default function TaskMonitoring() {
   /* ========== Action handlers ========== */
   const onAdd = () => {
     setMode("add");
+    setIsBillable(false);
     setForm({ ...emptyForm });
     setSubmitted(false);
     setShowModal(true);
@@ -381,6 +383,7 @@ export default function TaskMonitoring() {
 
   const onEdit = (r) => {
     setMode("edit");
+    r.hours > 0 ? setIsBillable(true) : setIsBillable(false);
     setForm({
       ...emptyForm,
       ...r,
@@ -492,12 +495,12 @@ export default function TaskMonitoring() {
       project_id: form.project_id ? Number(form.project_id) : 0,
       task_date: form.date || TODAY,
       task_completed: Number(form.taskCompleted || 0),
-      task_inprogress: Number(form.inProgress || 0),
       task_reworked: Number(form.reworked || 0),
       task_approved: Number(form.approved || 0),
       task_rejected: Number(form.rejected || 0),
       task_reviewed: Number(form.reviewed || 0),
       hours_logged: String(Number(form.hours || 0)),
+      description: form.description || "",
     };
 
     try {
@@ -518,12 +521,12 @@ export default function TaskMonitoring() {
           lead: created.lead || created.t_manager || form.lead,
           podLead: created.pod_lead || form.podLead,
           hours: Number(created.hours_logged ?? payload.hours_logged),
-          inProgress: Number(created.task_inprogress ?? payload.task_inprogress),
           taskCompleted: Number(created.task_completed ?? payload.task_completed),
           reworked: Number(created.task_reworked ?? payload.task_reworked),
           approved: Number(created.task_approved ?? payload.task_approved),
           rejected: Number(created.task_rejected ?? payload.task_rejected),
           reviewed: Number(created.task_reviewed ?? payload.task_reviewed),
+          description: created.description ?? payload.description,
         };
         setRows((prev) => [row, ...prev]);
         setSuccess({ show: true, message: "Task entry added" });
@@ -553,6 +556,7 @@ export default function TaskMonitoring() {
                 approved: Number(updated.task_approved ?? payload.task_approved),
                 rejected: Number(updated.task_rejected ?? payload.task_rejected),
                 reviewed: Number(updated.task_reviewed ?? payload.task_reviewed),
+                description: updated.description ?? payload.description,
               }
               : r
           )
@@ -775,7 +779,7 @@ export default function TaskMonitoring() {
             <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
               {/* left – title + range */}
               <div className="d-flex align-items-center gap-2 flex-wrap">
-                {view.type === "trainer" && (
+              {view.type === "trainer" && (
                   <button
                     type="button"
                     className="btn btn-outline-dark btn-sm action-btn btn-back"
@@ -784,11 +788,11 @@ export default function TaskMonitoring() {
                   >
                     <i className="bi bi-arrow-left" />
                     <span className="label">Back</span>
-                  </button>
-                )}
+                </button>
+              )}
 
-                <div className="title">
-                  {view.type === "trainer" ? (
+              <div className="title">
+                {view.type === "trainer" ? (
                     <>
                       Trainer: <span className="fw-semibold">{view.name}</span>{" "}
                       <span className="text-muted">({view.trainerId})</span>
@@ -796,28 +800,28 @@ export default function TaskMonitoring() {
                   ) : (
                     "Task Tracking"
                   )}
-                </div>
+              </div>
 
-                <div className="btn-group ms-2 flex-wrap" role="group" aria-label="range">
-                  {["day", "week", "month", "overall"].map((r) => (
-                    <button
-                      key={r}
+              <div className="btn-group ms-2 flex-wrap" role="group" aria-label="range">
+                {["day", "week", "month", "overall"].map((r) => (
+                  <button
+                    key={r}
                       type="button"
                       className={
                         "btn btn-sm " +
                         (range === r ? "btn-outline-primary active" : "btn-outline-secondary")
                       }
-                      onClick={() => setRange(r)}
-                    >
-                      {r[0].toUpperCase() + r.slice(1)}
-                    </button>
-                  ))}
-                </div>
+                    onClick={() => setRange(r)}
+                  >
+                    {r[0].toUpperCase() + r.slice(1)}
+                  </button>
+                ))}
               </div>
+            </div>
 
               <div className="hint small text-muted">
                 Track totals per trainer (hours & status). Day shows today’s entries.
-              </div>
+          </div>
               
               {/* right – From/To directly before search */}
               <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -863,7 +867,7 @@ export default function TaskMonitoring() {
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Search trainer / project"
+                    placeholder="Search by ID / Name / Email / etc...."
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                   />
@@ -879,13 +883,13 @@ export default function TaskMonitoring() {
               <thead className="text-center">
                 <tr>
                   <Th label="Date" k="date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <Th label="Trainer (ID)" k="trainer" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="Resource (ID)" k="trainer" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Project" k="project" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <Th label="GMS Manager" k="manager" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="GMS Coordinator" k="manager" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Turing Manager" k="lead" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Pod Lead" k="podLead" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Hours" k="hours" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                  <Th label="In Progress" k="inProgress" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <Th label="Billable" k="type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Task Completed" k="taskCompleted" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Reworked" k="reworked" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <Th label="Approved" k="approved" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -916,7 +920,7 @@ export default function TaskMonitoring() {
                     <td>{r.lead}</td>
                     <td>{r.podLead}</td>
                     <td>{r.hours}</td>
-                    <td className="text-primary fw-semibold">{r.inProgress}</td>
+                    <td>{r.hours > 0 ? "Billable" : "Non-Billable"}</td>
                     <td className="text-warning fw-semibold">{r.taskCompleted}</td>
                     <td className="text-danger fw-semibold">{r.reworked}</td>
                     <td className="text-success fw-semibold">{r.approved}</td>
@@ -1019,7 +1023,7 @@ export default function TaskMonitoring() {
                         <Tooltip />
                         <Legend
                           verticalAlign="bottom"
-                          align="center"
+                          align="center"     
                           wrapperStyle={{ marginTop: 4 }}
                           content={() => <div className="axis-hint">Hours ⬆️ • Dates ➡️</div>}
                         />
@@ -1094,7 +1098,7 @@ export default function TaskMonitoring() {
                           </div>
 
                           <div className="col-12 col-md-6">
-                            <label className="form-label">GMS Manager <span className="text-danger">*</span></label>
+                            <label className="form-label">GMS Coordinator <span className="text-danger">*</span></label>
                             <input className="form-control bg-light" value={form.manager} disabled />
                           </div>
 
@@ -1119,98 +1123,74 @@ export default function TaskMonitoring() {
                             />
                             {submitted && errors.date && <div className="invalid-feedback">{errors.date}</div>}
                           </div>
-
                           <div className="col-12 col-md-6">
-                            <label className="form-label">Hours Worked <span className="text-danger">*</span></label>
-                            <div className="d-flex align-items-center gap-2">
+                            <div className="form-check form-switch switch-inline">
                               <input
-                                type="number"
-                                min="0"
-                                max={form.overtime ? "24" : "8"}
-                                className={`form-control ${submitted && errors.hours ? "is-invalid" : ""}`}
-                                value={form.hours}
-                                onChange={(e) => setForm((f) => ({ ...f, hours: e.target.value }))}
-                                placeholder={"e.g. 0 to " + (form.overtime ? "24" : "8")}
+                                className="form-check-input"
+                                type="checkbox"
+                                id="switchInactive"
+                                checked={isBillable}
+                                onChange={(e) => setIsBillable(e.target.checked)}
                               />
-                              <div className="form-check ms-2">
-                                <input
-                                  className="form-check-input"
-                                  type="checkbox"
-                                  id="chkOt"
-                                  checked={form.overtime}
-                                  onChange={(e) => setForm((f) => ({ ...f, overtime: e.target.checked }))}
-                                />
-                                <label className="form-check-label" htmlFor="chkOt">Overtime</label>
-                              </div>
+                              <label className="form-check-label" htmlFor="switchInactive">
+                                Is Billable?
+                              </label>
                             </div>
-                            {submitted && errors.hours && <div className="invalid-feedback d-block">{errors.hours}</div>}
-                            <div className="form-text">Max 8 hrs (unlimited when Overtime is checked).</div>
                           </div>
 
-                          <div className="col-12 col-md-4">
-                            <label className="form-label text-info">In Progress</label>
-                            <input
-                              type="number"
-                              className={`form-control ${submitted && errors.inProgress ? "is-invalid" : ""}`}
-                              value={form.inProgress}
-                              onChange={(e) => setForm((f) => ({ ...f, inProgress: e.target.value }))}
-                            />
-                            {submitted && errors.inProgress && <div className="invalid-feedback">{errors.inProgress}</div>}
-                          </div>
-
-                          <div className="col-12 col-md-4">
-                            <label className="form-label text-primary">Tasks Completed</label>
-                            <input
-                              type="number"
-                              className={`form-control ${submitted && errors.taskCompleted ? "is-invalid" : ""}`}
-                              value={form.taskCompleted}
-                              onChange={(e) => setForm((f) => ({ ...f, taskCompleted: e.target.value }))}
-                            />
-                            {submitted && errors.taskCompleted && <div className="invalid-feedback">{errors.taskCompleted}</div>}
-                          </div>
-
-                          <div className="col-12 col-md-4">
-                            <label className="form-label text-danger">Reworked</label>
-                            <input
-                              type="number"
-                              className={`form-control ${submitted && errors.reworked ? "is-invalid" : ""}`}
-                              value={form.reworked}
-                              onChange={(e) => setForm((f) => ({ ...f, reworked: e.target.value }))}
-                            />
-                            {submitted && errors.reworked && <div className="invalid-feedback">{errors.reworked}</div>}
-                          </div>
-
-                          <div className="col-12 col-md-4">
-                            <label className="form-label text-success">Approved</label>
-                            <input
-                              type="number"
-                              className={`form-control ${submitted && errors.approved ? "is-invalid" : ""}`}
-                              value={form.approved}
-                              onChange={(e) => setForm((f) => ({ ...f, approved: e.target.value }))}
-                            />
-                            {submitted && errors.approved && <div className="invalid-feedback">{errors.approved}</div>}
-                          </div>
-
-                          <div className="col-12 col-md-4">
-                            <label className="form-label text-secondary">Rejected</label>
-                            <input
-                              type="number"
-                              className={`form-control ${submitted && errors.rejected ? "is-invalid" : ""}`}
-                              value={form.rejected}
-                              onChange={(e) => setForm((f) => ({ ...f, rejected: e.target.value }))}
-                            />
-                            {submitted && errors.rejected && <div className="invalid-feedback">{errors.rejected}</div>}
-                          </div>
-
-                          <div className="col-12 col-md-4">
-                            <label className="form-label text-primary">Reviewed</label>
-                            <input
-                              type="number"
-                              className={`form-control ${submitted && errors.reviewed ? "is-invalid" : ""}`}
-                              value={form.reviewed}
-                              onChange={(e) => setForm((f) => ({ ...f, reviewed: e.target.value }))}
-                            />
-                            {submitted && errors.reviewed && <div className="invalid-feedback">{errors.reviewed}</div>}
+                          {isBillable && (
+                            <>
+                              <div className="col-12 col-md-4">
+                                <label className="form-label">Hours Worked <span className="text-danger">*</span></label>
+                                <div className="d-flex align-items-center gap-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={form.overtime ? "24" : "8"}
+                                    className={`form-control ${submitted && errors.hours ? "is-invalid" : ""}`}
+                                    value={form.hours}
+                                    onChange={e => setForm(f => ({ ...f, hours: e.target.value }))}
+                                    placeholder={"e.g. 0 to " + (form.overtime ? "24" : "8")}
+                                  />
+                                  <div className="form-check ms-2">
+                                    <input className="form-check-input" type="checkbox" id="chkOt" checked={form.overtime} onChange={e => setForm(f => ({ ...f, overtime: e.target.checked }))} />
+                                    <label className="form-check-label" htmlFor="chkOt">Overtime</label>
+                                  </div>
+                                </div>
+                                {submitted && errors.hours && <div className="invalid-feedback d-block">{errors.hours}</div>}
+                                <div className="form-text">Max 8 hrs (unlimited when Overtime is checked).</div>
+                              </div>
+                              <div className="col-12 col-md-4">
+                                <label className="form-label text-primary">Tasks Completed</label>
+                                <input type="number" className={`form-control ${submitted && errors.taskCompleted ? "is-invalid" : ""}`} value={form.taskCompleted} onChange={e => setForm(f => ({ ...f, taskCompleted: e.target.value }))} />
+                                {submitted && errors.taskCompleted && <div className="invalid-feedback">{errors.taskCompleted}</div>}
+                              </div>
+                              <div className="col-12 col-md-4">
+                                <label className="form-label text-danger">Reworked</label>
+                                <input type="number" className={`form-control ${submitted && errors.reworked ? "is-invalid" : ""}`} value={form.reworked} onChange={e => setForm(f => ({ ...f, reworked: e.target.value }))} />
+                                {submitted && errors.reworked && <div className="invalid-feedback">{errors.reworked}</div>}
+                              </div>
+                              <div className="col-12 col-md-4">
+                                <label className="form-label text-success">Approved</label>
+                                <input type="number" className={`form-control ${submitted && errors.approved ? "is-invalid" : ""}`} value={form.approved} onChange={e => setForm(f => ({ ...f, approved: e.target.value }))} />
+                                {submitted && errors.approved && <div className="invalid-feedback">{errors.approved}</div>}
+                              </div>
+                              <div className="col-12 col-md-4">
+                                <label className="form-label text-danger">Rejected</label>
+                                <input type="number" className={`form-control ${submitted && errors.rejected ? "is-invalid" : ""}`} value={form.rejected} onChange={e => setForm(f => ({ ...f, rejected: e.target.value }))} />
+                                {submitted && errors.rejected && <div className="invalid-feedback">{errors.rejected}</div>}
+                              </div>
+                              <div className="col-12 col-md-4">
+                                <label className="form-label text-primary">Reviewed</label>
+                                <input type="number" className={`form-control ${submitted && errors.reviewed ? "is-invalid" : ""}`} value={form.reviewed} onChange={e => setForm(f => ({ ...f, reviewed: e.target.value }))} />
+                                {submitted && errors.reviewed && <div className="invalid-feedback">{errors.reviewed}</div>}
+                              </div>
+                            </>
+                          )}
+                          <div className="col-12 col-md-12">
+                            <label className="form-label">Remarks</label>
+                            <textarea className={`form-control ${submitted && errors.description ? "is-invalid" : ""}`} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                            {submitted && errors.description && <div className="invalid-feedback">{errors.description}</div>}
                           </div>
                         </div>
                       </div>

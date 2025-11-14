@@ -25,6 +25,7 @@ export default function ResourceList() {
     roleName: "",
     gender: "",
     email: "",
+    c_email: "",
     mobile: "",
     designation: "",
     skill: "",
@@ -91,7 +92,7 @@ export default function ResourceList() {
   /* ---------- CSV helpers (Resources) ---------- */
   const toCsv = (rows) => {
     const cols = [
-      "id", "name", "role", "roleName", "gender", "email", "mobile", "designation", "skill",
+      "id", "name", "role", "roleName", "gender", "email", "c_email", "mobile", "designation", "skill",
       "exp", "qualification", "state", "city", "start", "end", "status"
     ];
     if (!rows?.length) return cols.join(",") + "\n";
@@ -152,6 +153,7 @@ export default function ResourceList() {
           roleName: emp.role_name,
           gender: emp.gender,
           email: emp.email,
+          c_email: emp.corporate_email,
           mobile: emp.phone,
           designation: emp.designation,
           skill: emp.skill,
@@ -228,6 +230,7 @@ export default function ResourceList() {
     const [y, m, dd] = n.split(" ")[0].split("-");
     return dd && m && y ? `${dd}-${m}-${y}` : d;
   };
+
   // ---------- derived ----------
   const filtered = useMemo(() => {
     let d = [...rows];
@@ -353,6 +356,7 @@ export default function ResourceList() {
       role: form.role,
       gender: form.gender,
       email: form.email,
+      c_email: form.c_email,
       phone: form.mobile,
       designation: form.designation,
       skill: form.skill,
@@ -370,6 +374,7 @@ export default function ResourceList() {
       role: form.role,
       gender: form.gender,
       email: form.email,
+      c_email: form.c_email,
       phone: form.mobile,
       designation: form.designation,
       skill: form.skill,
@@ -651,16 +656,16 @@ export default function ResourceList() {
                 </div>
 
                 <div className="input-group header-search">
-                  <span className="input-group-text bg-white">
-                    <i className="bi bi-search" />
-                  </span>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Search trainer / project"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                  />
+                <span className="input-group-text bg-white">
+                  <i className="bi bi-search" />
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search by ID / Name / Email / etc.... "
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                />
                 </div>
               </div>
             </div>
@@ -675,7 +680,8 @@ export default function ResourceList() {
                   <Th label="Name" k="name" />
                   <Th label="Role" k="roleName" />
                   <Th label="Gender" k="gender" />
-                  <Th label="Email" k="email" />
+                  <Th label="GMS Email" k="email" />
+                  <Th label="Client Email" k="c_email" />
                   <Th label="Mobile" k="mobile" />
                   <Th label="Designation" k="designation" />
                   <Th label="Skill" k="skill" />
@@ -697,6 +703,7 @@ export default function ResourceList() {
                         {r.email}
                       </span>
                     </td>
+                    <td><span className="text-break d-inline-block" style={{ maxWidth: 220 }}>{r.c_email ?? "-"}</span></td>
                     <td>{r.mobile}</td>
                     <td>{r.designation}</td>
                     <td>{r.skill}</td>
@@ -853,6 +860,15 @@ export default function ResourceList() {
                             {submitted && errors.email && (
                               <div className="invalid-feedback">{errors.email}</div>
                             )}
+                          </div>
+
+                          <div className="col-12 col-md-6">
+                            <label className="form-label">Client Email <span className="text-danger">*</span></label>
+                            <input className={`form-control ${submitted && errors.c_email ? "is-invalid" : ""}`}
+                              placeholder="client@example.com"
+                              value={form.c_email}
+                              onChange={(e) => setForm({ ...form, c_email: e.target.value })} />
+                            {submitted && errors.c_email && <div className="invalid-feedback">{errors.c_email}</div>}
                           </div>
 
                           <div className="col-12 col-md-4">
