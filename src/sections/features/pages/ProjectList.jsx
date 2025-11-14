@@ -542,18 +542,11 @@ export default function ProjectList() {
                     onChange={(e) => setQ(e.target.value)}
                   />
                 </div>
-
-                <button
-                  className="btn btn-outline-secondary d-flex align-items-center"
-                  onClick={resetFilters}
-                >
-                  <i className="bi bi-arrow-counterclockwise me-1" /> Reset
-                </button>
               </div>
             </div>
 
             {/* SECOND LINE: filters + date range */}
-            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2 pl-filter">
+            <div className="d-flex align-items-center justify-content-end flex-wrap gap-2 mt-2 pl-filter">
               <div className="d-flex align-items-center gap-2 flex-wrap">
                 <i className="bi bi-funnel me-1 opacity-75" />
 
@@ -581,41 +574,46 @@ export default function ProjectList() {
                   items={["All Trainers", ...trainers]}
                   onChange={setFTrainer}
                 />
-              </div>
-
-              <div className="d-flex align-items-center gap-2">
-                <input
-                  placeholder="From Date"
-                  type="text"
-                  className="form-control date-input"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  onFocus={(e) => {
-                    e.target.type = "date";
-                    if (from) e.target.value = toYMD(from);
-                  }}
-                  onBlur={(e) => {
-                    const picked = e.target.value;
-                    e.target.type = "text";
-                    setFrom(picked ? toDMY(picked) : "");
-                  }}
-                />
-                <input
-                  placeholder="To Date"
-                  type="text"
-                  className="form-control date-input"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  onFocus={(e) => {
-                    e.target.type = "date";
-                    if (to) e.target.value = toYMD(to);
-                  }}
-                  onBlur={(e) => {
-                    const picked = e.target.value;
-                    e.target.type = "text";
-                    setTo(picked ? toDMY(picked) : "");
-                  }}
-                />
+                <div className="d-flex align-items-center gap-2">
+                  <input
+                    placeholder="From Date"
+                    type="text"
+                    className="form-control date-input"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    onFocus={(e) => {
+                      e.target.type = "date";
+                      if (from) e.target.value = toYMD(from);
+                    }}
+                    onBlur={(e) => {
+                      const picked = e.target.value;
+                      e.target.type = "text";
+                      setFrom(picked ? toDMY(picked) : "");
+                    }}
+                  />
+                  <input
+                    placeholder="To Date"
+                    type="text"
+                    className="form-control date-input"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    onFocus={(e) => {
+                      e.target.type = "date";
+                      if (to) e.target.value = toYMD(to);
+                    }}
+                    onBlur={(e) => {
+                      const picked = e.target.value;
+                      e.target.type = "text";
+                      setTo(picked ? toDMY(picked) : "");
+                    }}
+                  />
+                </div>
+                <button
+                  className="btn btn-outline-secondary d-flex align-items-center"
+                  onClick={resetFilters}
+                >
+                  <i className="bi bi-arrow-counterclockwise me-1" /> Reset
+                </button>
               </div>
             </div>
           </div>

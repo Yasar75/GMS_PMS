@@ -62,6 +62,15 @@
 }
 
 /* Header layout */
+.header-row {
+  flex-wrap: nowrap;
+}
+
+.header-row .header-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .header-row .header-search {
   width: clamp(260px, 28vw, 360px);
 }
@@ -140,7 +149,7 @@ body {
 
 .pl-scope .card-header {
   border: 0;
-  padding: 8px 12px;
+  padding: 8px 14px;
   background: transparent;
 }
 
@@ -263,7 +272,7 @@ body {
   border-bottom-color: transparent !important;
 }
 
-/* Ten rows fit in the viewport without scroll */
+/* Ten rows fit nicely */
 .pl-scope .gm-table tbody tr {
   height: 40px;
 }
