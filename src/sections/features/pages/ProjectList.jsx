@@ -100,20 +100,20 @@ export default function ProjectList() {
 
         const projectData = Array.isArray(projRes?.data)
           ? projRes.data.map((p) => ({
-              id: p.project_id ?? p.id ?? "",
-              employees_id: p.employees_id ?? "",
-              name: (p.project_name ?? p.name ?? "").toString(),
-              manager: p.gms_manager ?? p.manager ?? "",
-              lead: p.t_manager ?? p.lead ?? p.lead_name ?? "",
-              podLead: p.pod_lead ?? p.podLead ?? p.pod_name ?? "",
-              trainer:
-                `${p.employee_first_name ?? ""} ${p.employee_last_name ?? ""}`.trim() ||
-                p.trainer_name ||
-                "",
-              start: p.active_at ?? p.create_at ?? "",
-              end: p.inactive_at ?? p.finish_at ?? null,
-              status: String(p.status ?? p.project_status ?? "1"),
-            }))
+            id: p.project_id ?? p.id ?? "",
+            employees_id: p.employees_id ?? "",
+            name: (p.project_name ?? p.name ?? "").toString(),
+            manager: p.gms_manager ?? p.manager ?? "",
+            lead: p.t_manager ?? p.lead ?? p.lead_name ?? "",
+            podLead: p.pod_lead ?? p.podLead ?? p.pod_name ?? "",
+            trainer:
+              `${p.employee_first_name ?? ""} ${p.employee_last_name ?? ""}`.trim() ||
+              p.trainer_name ||
+              "",
+            start: p.active_at ?? p.create_at ?? "",
+            end: p.inactive_at ?? p.finish_at ?? null,
+            status: String(p.status ?? p.project_status ?? "1"),
+          }))
           : [];
 
         setRows(projectData);
@@ -399,17 +399,17 @@ export default function ProjectList() {
             r.id !== form.id
               ? r
               : {
-                  ...r,
-                  employees_id: updated.employees_id ?? payload.employees_id ?? r.employees_id,
-                  name: updated.project_name ?? form.name,
-                  manager: updated.gms_manager ?? form.manager,
-                  lead: updated.t_manager ?? form.lead,
-                  podLead: updated.pod_lead ?? form.podLead,
-                  trainer: payload.trainer_name,
-                  start: updated.active_at ?? startISO,
-                  end: updated.inactive_at ?? (String(form.status) === "0" ? endISO : null),
-                  status: String(updated.status ?? form.status),
-                }
+                ...r,
+                employees_id: updated.employees_id ?? payload.employees_id ?? r.employees_id,
+                name: updated.project_name ?? form.name,
+                manager: updated.gms_manager ?? form.manager,
+                lead: updated.t_manager ?? form.lead,
+                podLead: updated.pod_lead ?? form.podLead,
+                trainer: payload.trainer_name,
+                start: updated.active_at ?? startISO,
+                end: updated.inactive_at ?? (String(form.status) === "0" ? endISO : null),
+                status: String(updated.status ?? form.status),
+              }
           )
         );
         setSuccess({ show: true, message: "Project Data is updated" });
@@ -478,7 +478,7 @@ export default function ProjectList() {
 
   return (
     <AppLayout>
-      <div className="pl-scope px-2 py-2">
+      <div className="projects-page pl-scope px-2 py-2">
         {/* hidden file input (placeholder for future) */}
         <input
           type="file"
@@ -492,7 +492,7 @@ export default function ProjectList() {
         />
 
         {/* actions */}
-        <div className="d-flex justify-content-end mb-2 gap-2">
+        <div className="d-flex justify-content-end mb-2 gap-2 pl-actions">
           <button className="btn btn-primary action-btn" title="Import CSV">
             <i className="bi bi-database-up" />
             <span className="label">Import Data</span>
@@ -509,9 +509,9 @@ export default function ProjectList() {
 
         <div className="card bg-body-tertiary border-3 rounded-3 shadow">
           <div className="card-header bg-warning-subtle text-warning-emphasis">
-            {/* header row */}
-            <div className="d-flex align-items-center justify-content-between header-row">
-              <div className="d-flex align-items-center gap-3">
+            {/* TOP LINE: title + toggle + search */}
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 header-row">
+              <div className="d-flex align-items-center gap-3 header-left">
                 <h5 className="mb-0">Projects</h5>
 
                 {/* Show Inactive toggle (pure state; no data mutation) */}
@@ -529,78 +529,100 @@ export default function ProjectList() {
                 </div>
               </div>
 
-              {/* Search */}
-              <div className="input-group header-search">
-                <span className="input-group-text bg-white">
-                  <i className="bi bi-search" />
-                </span>
-                <input
-                  className="form-control"
-                  placeholder="Search projects by name"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
+              {/* search stays on the top line */}
+              <div className="d-flex align-items-center gap-2">
+                <div className="input-group header-search">
+                  <span className="input-group-text bg-white">
+                    <i className="bi bi-search" />
+                  </span>
+                  <input
+                    className="form-control"
+                    placeholder="Search projects by name"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  className="btn btn-outline-secondary d-flex align-items-center"
+                  onClick={resetFilters}
+                >
+                  <i className="bi bi-arrow-counterclockwise me-1" /> Reset
+                </button>
               </div>
             </div>
 
-            {/* Filters — custom dropdowns (headless) + your original date inputs */}
-            <div className="d-flex align-items-center justify-content-end gap-2 mt-2 pl-filter">
-              <i className="bi bi-funnel me-1 opacity-75" />
+            {/* SECOND LINE: filters + date range */}
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2 pl-filter">
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <i className="bi bi-funnel me-1 opacity-75" />
 
-              <CustomDropdown
-                label="All GMS Manager"
-                value={fManager}
-                items={["All GMS Manager", ...managers]}
-                onChange={setFManager}
-              />
-              <CustomDropdown
-                label="All Turing Manager"
-                value={fLead}
-                items={["All Turing Manager", ...leads]}
-                onChange={setFLead}
-              />
-              <CustomDropdown
-                label="All Pod Leads"
-                value={fPodLead}
-                items={["All Pod Leads", ...podLeads]}
-                onChange={setFPodLead}
-              />
-              <CustomDropdown
-                label="All Trainers"
-                value={fTrainer}
-                items={["All Trainers", ...trainers]}
-                onChange={setFTrainer}
-              />
+                <CustomDropdown
+                  label="All GMS Manager"
+                  value={fManager}
+                  items={["All GMS Manager", ...managers]}
+                  onChange={setFManager}
+                />
+                <CustomDropdown
+                  label="All Turing Manager"
+                  value={fLead}
+                  items={["All Turing Manager", ...leads]}
+                  onChange={setFLead}
+                />
+                <CustomDropdown
+                  label="All Pod Leads"
+                  value={fPodLead}
+                  items={["All Pod Leads", ...podLeads]}
+                  onChange={setFPodLead}
+                />
+                <CustomDropdown
+                  label="All Trainers"
+                  value={fTrainer}
+                  items={["All Trainers", ...trainers]}
+                  onChange={setFTrainer}
+                />
+              </div>
 
-              {/* date filters – fixed width (30%) via CSS) */}
-              <input
-                placeholder="From Date"
-                type="text"
-                className="form-control date-input"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                onFocus={(e) => { e.target.type = "date"; if (from) e.target.value = toYMD(from); }}
-                onBlur={(e) => { const picked = e.target.value; e.target.type = "text"; setFrom(picked ? toDMY(picked) : ""); }}
-              />
-              <input
-                placeholder="To Date"
-                type="text"
-                className="form-control date-input"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                onFocus={(e) => { e.target.type = "date"; if (to) e.target.value = toYMD(to); }}
-                onBlur={(e) => { const picked = e.target.value; e.target.type = "text"; setTo(picked ? toDMY(picked) : ""); }}
-              />
-
-              <button className="btn btn-outline-secondary d-flex align-items-center" onClick={resetFilters}>
-                <i className="bi bi-arrow-counterclockwise me-1" /> Reset
-              </button>
+              <div className="d-flex align-items-center gap-2">
+                <input
+                  placeholder="From Date"
+                  type="text"
+                  className="form-control date-input"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  onFocus={(e) => {
+                    e.target.type = "date";
+                    if (from) e.target.value = toYMD(from);
+                  }}
+                  onBlur={(e) => {
+                    const picked = e.target.value;
+                    e.target.type = "text";
+                    setFrom(picked ? toDMY(picked) : "");
+                  }}
+                />
+                <input
+                  placeholder="To Date"
+                  type="text"
+                  className="form-control date-input"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  onFocus={(e) => {
+                    e.target.type = "date";
+                    if (to) e.target.value = toYMD(to);
+                  }}
+                  onBlur={(e) => {
+                    const picked = e.target.value;
+                    e.target.type = "text";
+                    setTo(picked ? toDMY(picked) : "");
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           {/* TABLE */}
-          <div className="table-responsive bg-warning-subtle text-warning-emphasis rounded shadow">
-            <table className="table gm-table table-hover align-middle mb-0 has-actions">
+          <div className="table-responsive">
+            <table className="table table-hover tasks-table">
               <thead>
                 <tr className="table-light-emphasis">
                   <Th label="ID" k="id" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -626,12 +648,20 @@ export default function ProjectList() {
                     <td>{toDMY(r.start)}</td>
                     {showInactive && <td>{r.end ? toDMY(r.end) : "-"}</td>}
                     <td className="actions-col">
-                      <div className="action-wrap">
-                        <button className="btn btn-outline-info btn-sm action-btn" onClick={() => onEdit(r)} title="Edit">
+                      <div className="action-wrap" role="group" aria-label="Actions">
+                        <button
+                          className="btn btn-outline-secondary btn-sm action-btn"
+                          onClick={() => onEdit(r)}
+                          title="Edit"
+                        >
                           <i className="bi bi-pencil-square" />
                           <span className="label">Edit</span>
                         </button>
-                        <button className="btn btn-outline-danger btn-sm action-btn" onClick={() => onDelete(r.id)} title="Delete">
+                        <button
+                          className="btn btn-outline-danger btn-sm action-btn"
+                          onClick={() => onDelete(r.id)}
+                          title="Delete"
+                        >
                           <i className="bi bi-trash3" />
                           <span className="label">Delete</span>
                         </button>

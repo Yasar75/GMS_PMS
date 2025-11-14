@@ -28,6 +28,26 @@ const pad2 = (n) => String(n).padStart(2, "0");
 const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const TODAY = toLocalYMD(new Date());
 
+const normalize = (s) => s?.replace("T", " ").replace("Z", "") || "";
+
+const toYMD = (d) => {
+  const n = normalize(d);
+  if (!n) return "";
+  const dmy = /^\d{2}-\d{2}-\d{4}$/;
+  if (dmy.test(n)) {
+    const [dd, mm, yy] = n.split("-");
+    return `${yy}-${mm}-${dd}`;
+  }
+  return n.slice(0, 10);
+};
+
+const toDMY = (d) => {
+  const n = normalize(d);
+  if (!n) return "";
+  const [y, m, dd] = n.split(" ")[0].split("-");
+  return dd && m && y ? `${dd}-${m}-${y}` : d;
+};
+
 const isActiveFlag = (o) => {
   const st = o?.status ?? o?.is_active ?? 1;
   return String(st) !== "0" && st !== 0 && st !== false;
@@ -130,6 +150,11 @@ export default function TaskMonitoring() {
   const [view, setView] = useState({ type: "overview" }); // or { type:"trainer", trainerId, name }
   const [sortKey, setSortKey] = useState("date");
   const [sortDir, setSortDir] = useState("desc");
+
+
+  const [q, setQ] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   // ALIGNMENT: hard cap visible rows
   const PAGE_OVERVIEW = 10;
@@ -269,7 +294,27 @@ export default function TaskMonitoring() {
 
   const filtered = useMemo(() => {
     let d = rows.filter((r) => isInRange(r.date));
-    if (view.type === "trainer") d = d.filter((r) => r.trainerId === view.trainerId);
+
+    // text search
+    if (q.trim()) {
+      const qq = q.trim().toLowerCase();
+      d = d.filter((r) =>
+        String(r.trainer || "").toLowerCase().includes(qq) ||
+        String(r.trainerId || "").toLowerCase().includes(qq) ||
+        String(r.project || "").toLowerCase().includes(qq)
+      );
+    }
+
+    // date range (same semantics as ProjectList)
+    const fISO = toYMD(from);
+    const tISO = toYMD(to);
+    if (fISO) d = d.filter((r) => toYMD(r.date) >= fISO);
+    if (tISO) d = d.filter((r) => toYMD(r.date) <= tISO);
+
+    if (view.type === "trainer") {
+      d = d.filter((r) => r.trainerId === view.trainerId);
+    }
+
     d.sort((a, b) => {
       const A = (a[sortKey] ?? "").toString();
       const B = (b[sortKey] ?? "").toString();
@@ -277,7 +322,8 @@ export default function TaskMonitoring() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return d;
-  }, [rows, view, range, sortKey, sortDir]);
+  }, [rows, view, range, sortKey, sortDir, q, from, to]);
+
 
   const pageSize = view.type === "trainer" ? PAGE_TRAINER : PAGE_OVERVIEW;
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -285,8 +331,15 @@ export default function TaskMonitoring() {
   const endIdx = Math.min(startIdx + pageSize, filtered.length);
   const pageRows = useMemo(() => filtered.slice(startIdx, endIdx), [filtered, startIdx, endIdx]);
 
-  useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
-  useEffect(() => { setPage(1); }, [range, view]);
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [range, view, q, from, to]);
+
+
 
   /* ========== Validation ========== */
   const hoursNum = Number(form.hours || 0);
@@ -715,33 +768,110 @@ export default function TaskMonitoring() {
 
         {/* Header + Range */}
         <div className="card bg-body-tertiary border-3 rounded-3 shadow tasks-card">
-          <div className={`card-header bg-warning-subtle text-warning-emphasis tasks-toolbar ${view.type === "trainer" ? "has-back" : ""}`}>
-            <div className="d-flex align-items-center gap-2 flex-wrap pb-2">
-              {view.type === "trainer" && (
-                <button type="button" className="btn btn-outline-dark btn-sm action-btn btn-back" onClick={() => setView({ type: "overview" })} title="Back">
-                  <i className="bi bi-arrow-left" /><span className="label">Back</span>
-                </button>
-              )}
-              <div className="title">
-                {view.type === "trainer" ? (
-                  <>Trainer: <span className="fw-semibold">{view.name}</span> <span className="text-muted">({view.trainerId})</span></>
-                ) : "Task Tracking"}
+          <div
+            className={`card-header bg-warning-subtle text-warning-emphasis tasks-toolbar ${view.type === "trainer" ? "has-back" : ""
+              }`}
+          >
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              {/* left – title + range */}
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                {view.type === "trainer" && (
+                  <button
+                    type="button"
+                    className="btn btn-outline-dark btn-sm action-btn btn-back"
+                    onClick={() => setView({ type: "overview" })}
+                    title="Back"
+                  >
+                    <i className="bi bi-arrow-left" />
+                    <span className="label">Back</span>
+                  </button>
+                )}
+
+                <div className="title">
+                  {view.type === "trainer" ? (
+                    <>
+                      Trainer: <span className="fw-semibold">{view.name}</span>{" "}
+                      <span className="text-muted">({view.trainerId})</span>
+                    </>
+                  ) : (
+                    "Task Tracking"
+                  )}
+                </div>
+
+                <div className="btn-group ms-2 flex-wrap" role="group" aria-label="range">
+                  {["day", "week", "month", "overall"].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={
+                        "btn btn-sm " +
+                        (range === r ? "btn-outline-primary active" : "btn-outline-secondary")
+                      }
+                      onClick={() => setRange(r)}
+                    >
+                      {r[0].toUpperCase() + r.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="btn-group ms-2 flex-wrap" role="group" aria-label="range">
-                {["day", "week", "month", "overall"].map((r) => (
-                  <button
-                    key={r}
-                    className={"btn btn-sm " + (range === r ? "btn-outline-primary active" : "btn-outline-secondary")}
-                    onClick={() => setRange(r)}
-                  >
-                    {r[0].toUpperCase() + r.slice(1)}
-                  </button>
-                ))}
+              <div className="hint small text-muted">
+                Track totals per trainer (hours & status). Day shows today’s entries.
               </div>
-              <div className="hint small text-muted">Track totals per trainer (hours & status). Day shows today’s entries.</div>
+              
+              {/* right – From/To directly before search */}
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <div className="d-flex align-items-center gap-2">
+                  <input
+                    placeholder="From Date"
+                    type="text"
+                    className="form-control date-input"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    onFocus={(e) => {
+                      e.target.type = "date";
+                      if (from) e.target.value = toYMD(from);
+                    }}
+                    onBlur={(e) => {
+                      const picked = e.target.value;
+                      e.target.type = "text";
+                      setFrom(picked ? toDMY(picked) : "");
+                    }}
+                  />
+                  <input
+                    placeholder="To Date"
+                    type="text"
+                    className="form-control date-input"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    onFocus={(e) => {
+                      e.target.type = "date";
+                      if (to) e.target.value = toYMD(to);
+                    }}
+                    onBlur={(e) => {
+                      const picked = e.target.value;
+                      e.target.type = "text";
+                      setTo(picked ? toDMY(picked) : "");
+                    }}
+                  />
+                </div>
+
+                <div className="input-group header-search">
+                  <span className="input-group-text bg-white">
+                    <i className="bi bi-search" />
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search trainer / project"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
           </div>
+
 
           {/* Table */}
           <div className="table-responsive">
@@ -889,7 +1019,7 @@ export default function TaskMonitoring() {
                         <Tooltip />
                         <Legend
                           verticalAlign="bottom"
-                          align="center"     
+                          align="center"
                           wrapperStyle={{ marginTop: 4 }}
                           content={() => <div className="axis-hint">Hours ⬆️ • Dates ➡️</div>}
                         />
